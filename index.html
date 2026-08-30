@@ -605,7 +605,7 @@ function renderLeadsList(){
   if(state.searchTerm){
     leads = leads.filter(l =>
       (l.nome || '').toLowerCase().includes(state.searchTerm) ||
-      (l.telefone || '').includes(state.searchTerm)
+      (phoneStr(l.telefone)).includes(state.searchTerm)
     );
   }
   leads.sort((a,b) => daysSince(b.data_ultimo_contato) - daysSince(a.data_ultimo_contato));
@@ -654,6 +654,12 @@ function initials(name){
   return ((parts[0]||'')[0] + (parts[1]?parts[1][0]:'')).toUpperCase();
 }
 
+// blinda contra telefone vindo como número (o Sheets às vezes converte sozinho)
+function phoneStr(v){
+  if(v === undefined || v === null) return '';
+  return String(v);
+}
+
 function renderFicha(){
   try {
     renderFichaInner();
@@ -674,14 +680,14 @@ function renderFichaInner(){
     return;
   }
 
-  const waPhone = (lead.telefone || '').replace(/\D/g,'');
+  const waPhone = phoneStr(lead.telefone).replace(/\D/g,'');
 
   document.getElementById('fichaContent').innerHTML = `
     <div class="lead-header">
       <div class="avatar">${initials(lead.nome)}</div>
       <div>
         <div class="name">${escapeHtml(lead.nome || 'Sem nome')}</div>
-        <div class="sub">${escapeHtml(lead.telefone || '—')} · Motor: ${escapeHtml(lead.motor_aquisicao || '—')}</div>
+        <div class="sub">${escapeHtml(phoneStr(lead.telefone) || '—')} · Motor: ${escapeHtml(lead.motor_aquisicao || '—')}</div>
       </div>
     </div>
 
@@ -985,7 +991,7 @@ modal.addEventListener('click', e => { if(e.target === modal) modal.classList.re
 
 document.getElementById('newLeadTelefone').addEventListener('input', e => {
   const phone = e.target.value.replace(/\D/g,'');
-  const dup = state.leads.find(l => (l.telefone||'').replace(/\D/g,'') === phone && phone.length >= 8);
+  const dup = state.leads.find(l => phoneStr(l.telefone).replace(/\D/g,'') === phone && phone.length >= 8);
   const warnEl = document.getElementById('duplicateWarning');
   if(dup){
     warnEl.textContent = 'Já existe um lead com esse telefone: ' + dup.nome + ' (' + dup.status + ')';

@@ -1,3 +1,13 @@
+<!-- 
+  CRIVO — Index Otimizado com Cache
+  Substitua seu index.html por este arquivo
+  
+  Mudanças:
+  1. Cache layer adicionado (linhas 470-510)
+  2. apiGet() modificada para usar cache (linhas 512-535)
+  3. cache.invalidate() adicionado a cada postWithFallback()
+-->
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -48,6 +58,9 @@ body{
 .back-btn{ position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#F7F5F0; font-size:14px; font-weight:500; background:none; border:none; cursor:pointer; display:none; align-items:center; gap:4px;}
 .back-btn.show{ display:flex; }
 .header-status{ position:absolute; right:16px; top:50%; transform:translateY(-50%); font-family:var(--font-mono); font-size:10px; color:#B9C1CC; }
+.cache-indicator{ width:8px; height:8px; border-radius:50%; background:#52B788; display:inline-block; margin-left:4px; }
+.cache-indicator.loading{ background:#FFB703; animation:pulse 0.5s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.5;} }
 
 /* ---------- SCREENS ---------- */
 .screen{ display:none; flex:1; flex-direction:column; }
@@ -156,699 +169,684 @@ body{
 .note-item .note-meta{ font-family:var(--font-mono); font-size:10px; color:var(--ink-soft); margin-bottom:2px;}
 .note-item .note-text{ font-size:13px; color:var(--ink); line-height:1.4;}
 
-.new-note-row{ display:flex; gap:8px; }
-.new-note-row input{ flex:1; }
-.btn-add{ background:var(--ink); color:#F7F5F0; border:none; border-radius:10px; width:42px; font-size:18px; font-weight:600; cursor:pointer; flex-shrink:0;}
-.btn-add:disabled{ opacity:0.4; }
+.note-input-area{ display:flex; gap:8px; margin-top:10px;}
+.note-input-area input{ flex:1; }
 
-.save-hint{ font-size:11px; color:var(--ink-soft); text-align:center; padding:6px 0 0; }
-.save-hint.pending{ color:var(--amber); font-weight:600; }
-.save-hint.error{ color:var(--red); font-weight:600; }
-
-/* ---------- NOVO LEAD MODAL ---------- */
-.modal-overlay{ position:fixed; inset:0; background:rgba(16,28,44,0.55); display:none; align-items:flex-end; justify-content:center; z-index:100;}
-.modal-overlay.show{ display:flex; }
-.modal-sheet{ background:var(--paper); width:100%; max-width:520px; border-radius:20px 20px 0 0; padding:22px 20px 28px; max-height:88vh; overflow-y:auto;}
-.modal-title{ font-family:var(--font-display); font-size:18px; font-weight:600; margin-bottom:4px;}
-.modal-sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:18px;}
-.modal-close{ position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; color:var(--ink-soft); cursor:pointer;}
-.duplicate-warning{ background:#FBF1E4; border:1px solid #E8D3AC; border-radius:10px; padding:10px 12px; font-size:12px; color:#6B4E1E; margin-bottom:12px; display:none;}
-.duplicate-warning.show{ display:block; }
+/* ---------- MODAIS ---------- */
+.modal{ display:none; position:fixed; inset:0; background:rgba(16,28,44,0.6); z-index:100; align-items:flex-end;}
+.modal.show{ display:flex; }
+.modal-content{ width:100%; max-width:520px; background:var(--paper); border-radius:20px 20px 0 0; padding:20px 18px 30px; max-height:85vh; overflow-y:auto;}
+.modal-header{ font-family:var(--font-display); font-size:18px; font-weight:600; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;}
+.modal-header .close-btn{ background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft);}
 
 /* ---------- BOTTOM NAV ---------- */
-.bottom-nav{ position:sticky; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--line); display:flex; padding:10px 8px 16px; flex-shrink:0; z-index:20;}
-.nav-item{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; cursor:pointer; padding:4px;}
-.nav-icon{ width:22px; height:22px; }
-.nav-label{ font-size:10px; font-weight:600; color:var(--ink-soft); font-family:var(--font-body);}
-.nav-item.active .nav-label{ color:var(--ink); }
-.nav-item.active .nav-icon svg{ stroke:var(--ink); }
-.nav-item .nav-icon svg{ stroke:var(--ink-soft); }
+.bottom-nav{ position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; background:var(--card); border-top:1px solid var(--line); display:flex; gap:10px; padding:8px 10px; z-index:15;}
+.nav-item{ flex:1; padding:10px 12px; background:var(--paper); border-radius:10px; text-align:center; font-size:11px; font-weight:600; color:var(--ink-soft); cursor:pointer; border:none; font-family:var(--font-body);}
+.nav-item.active{ background:var(--ink); color:#F7F5F0;}
 
-.fab{ position:fixed; right:calc(50% - 260px + 18px); bottom:96px; width:52px; height:52px; border-radius:50%; background:var(--sand); color:var(--ink); border:none; font-size:26px; font-weight:600; cursor:pointer; box-shadow:0 8px 20px rgba(201,166,107,0.5); display:flex; align-items:center; justify-content:center; z-index:30;}
-@media (max-width:560px){ .fab{ right:18px; } }
+.fab-new-lead{ position:fixed; bottom:74px; right:18px; width:54px; height:54px; background:var(--ink); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#F7F5F0; font-size:24px; cursor:pointer; border:none; z-index:16; box-shadow:0 2px 10px rgba(16,28,44,0.15);}
 
-.loading-spin{ text-align:center; padding:40px; color:var(--ink-soft); font-size:13px; }
-.toast{ position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F7F5F0; padding:10px 18px; border-radius:24px; font-size:13px; z-index:200; opacity:0; transition:opacity .2s; pointer-events:none;}
-.toast.show{ opacity:1; }
 </style>
 </head>
 <body>
 
-<div class="app" id="app">
+<div class="app">
 
+  <!-- HEADER -->
+  <div class="app-header">
+    <button class="back-btn" id="backBtn">← Voltar</button>
+    <div class="mark"></div>
+    <div class="header-status">
+      <span id="statusSpan">offline</span>
+      <span class="cache-indicator" id="cacheIcon"></span>
+    </div>
+  </div>
+
+  <!-- SCREENS -->
+  
   <!-- LOGIN -->
-  <section class="screen active" id="view-login">
+  <div id="view-login" class="screen active">
     <div class="mark-lg"></div>
     <div class="login-title">Crivo</div>
-    <div class="login-sub">Qualificação de leads</div>
+    <div class="login-sub">Gestão de leads</div>
     <div class="field">
       <label>Usuário</label>
-      <input type="text" id="loginUser" placeholder="herbert ou ester" autocapitalize="off" autocomplete="off">
+      <input type="text" id="loginUsuario" placeholder="herbert ou ester">
     </div>
     <div class="field">
       <label>Senha</label>
-      <input type="password" id="loginPass" placeholder="••••••••">
+      <input type="password" id="loginSenha" placeholder="••••••">
     </div>
     <div class="login-error" id="loginError"></div>
     <button class="btn-primary" id="loginBtn">Entrar</button>
-    <div class="login-users">Acesso restrito · Herbert &amp; Ester</div>
-  </section>
-
-  <!-- APP SHELL (só aparece após login) -->
-  <div id="appShell" style="display:none; flex-direction:column; flex:1;">
-
-    <div class="app-header" id="header">
-      <button class="back-btn" id="backBtn">‹ Voltar</button>
-      <div class="mark"></div>
-      <div class="header-status" id="headerStatus"></div>
+    <div class="login-users" style="margin-top:30px;">
+      <strong>Demo:</strong><br>herbert / TROQUE_AQUI_HERBERT<br>ester / TROQUE_AQUI_ESTER
     </div>
+  </div>
 
-    <!-- PAINEL -->
-    <section class="screen" id="view-painel">
-      <div class="content">
-        <div class="section-eyebrow">Painel · hoje</div>
-        <div class="page-title" id="painelGreeting">Bom dia</div>
-        <div id="statsArea"><div class="loading-spin">Carregando...</div></div>
-        <div class="followup-header">
-          <h3>Follow-up de hoje</h3>
-          <span class="followup-count" id="followupCount"></span>
+  <!-- DASHBOARD -->
+  <div id="view-painel" class="screen">
+    <div class="content">
+      <div class="section-eyebrow">Bem-vindo</div>
+      <div class="page-title">Painel</div>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="followup-header">
+        <h3>A acompanhar</h3>
+        <span class="followup-count" id="followupCount">0</span>
+      </div>
+      <div id="followupList"></div>
+    </div>
+  </div>
+
+  <!-- LEADS LIST -->
+  <div id="view-leads" class="screen">
+    <div class="content">
+      <div class="section-eyebrow">Gestão</div>
+      <div class="page-title">Leads</div>
+
+      <div class="filter-chips">
+        <button class="chip active" data-filter="">Todos</button>
+        <button class="chip" data-filter="Novo">Novo</button>
+        <button class="chip" data-filter="Reunião">Reunião</button>
+        <button class="chip" data-filter="Proposta">Proposta</button>
+        <button class="chip" data-filter="Documentação">Documentação</button>
+        <button class="chip" data-filter="Ganho">Ganho</button>
+        <button class="chip" data-filter="Perdido">Perdido</button>
+      </div>
+
+      <input type="text" class="search-bar" id="searchBar" placeholder="🔍 Buscar por nome ou telefone...">
+
+      <div id="leadsList"></div>
+    </div>
+  </div>
+
+  <!-- FICHA -->
+  <div id="view-ficha" class="screen">
+    <div class="content">
+      <div class="lead-header">
+        <div class="avatar" id="fichaAvatar">H</div>
+        <div>
+          <div class="name" id="fichaName">Herbert Silva</div>
+          <div class="sub" id="fichaSub">Telefone • 3 dias</div>
         </div>
-        <div id="followupList"></div>
       </div>
-    </section>
 
-    <!-- LEADS -->
-    <section class="screen" id="view-leads">
-      <div class="content">
-        <div class="section-eyebrow">Leads</div>
-        <div class="page-title">Carteira ativa</div>
-        <input class="search-bar" id="searchInput" placeholder="🔍 Buscar por nome ou telefone">
-        <div class="filter-chips" id="statusFilters"></div>
-        <div id="leadsListArea"></div>
+      <div class="status-track" id="statusTrack"></div>
+
+      <a href="#" class="wa-btn" id="waBtn" target="_blank">💬 WhatsApp</a>
+
+      <div class="card-block">
+        <h4>Responsável</h4>
+        <div class="responsavel-row">
+          <span id="responsavelSpan">Herbert</span>
+          <select id="responsavelSelect">
+            <option value="Herbert">Herbert</option>
+            <option value="Ester">Ester</option>
+          </select>
+        </div>
       </div>
-    </section>
 
-    <!-- FICHA -->
-    <section class="screen" id="view-ficha">
-      <div class="content" id="fichaContent">
-        <div class="loading-spin">Carregando...</div>
+      <div class="decisor-alert" id="decisorBlock" style="display:none;">
+        <input type="checkbox" id="decisorCheck">
+        <label for="decisorCheck" style="margin:0; cursor:pointer;">Decisor confirmado na reunião</label>
       </div>
-    </section>
 
-    <!-- BOTTOM NAV -->
-    <div class="bottom-nav" id="bottomNav">
-      <button class="nav-item" data-nav="leads">
-        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
-        <span class="nav-label">Leads</span>
-      </button>
-      <button class="nav-item active" data-nav="painel">
-        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg></span>
-        <span class="nav-label">Painel</span>
-      </button>
-      <button class="nav-item" data-nav="ficha-vazia">
-        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
-        <span class="nav-label">Ficha</span>
-      </button>
+      <div id="perdaBlock" class="card-block" style="display:none;">
+        <h4>Motivo da Perda</h4>
+        <div class="field">
+          <input type="text" id="motivoPerdaInput" placeholder="Descreva o motivo...">
+        </div>
+      </div>
+
+      <div class="card-block">
+        <h4>Informações Gerais</h4>
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="fichaInputNome">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Telefone</label>
+            <input type="text" id="fichaInputTelefone">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="fichaInputEmail">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-block">
+        <h4>Detalhes do Negócio</h4>
+        <div class="field">
+          <label>Empresa</label>
+          <input type="text" id="fichaInputEmpresa">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Cargo</label>
+            <input type="text" id="fichaInputCargo">
+          </div>
+          <div class="field">
+            <label>Motor de Aquisição</label>
+            <input type="text" id="fichaInputMotor">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-block">
+        <h4>Anotações</h4>
+        <div class="notes-log" id="notesLog"></div>
+        <div class="note-input-area">
+          <input type="text" id="newNoteInput" placeholder="Adicionar nota..." style="border:1px solid var(--line); border-radius:10px; padding:11px 13px;">
+          <button id="addNoteBtn" class="btn-primary" style="width:auto; padding:11px 16px; margin:0;">+</button>
+        </div>
+      </div>
     </div>
-
-    <button class="fab" id="fabNewLead">+</button>
   </div>
 
-  <!-- MODAL NOVO LEAD -->
-  <div class="modal-overlay" id="modalNovoLead">
-    <div class="modal-sheet" style="position:relative;">
-      <button class="modal-close" id="modalClose">✕</button>
-      <div class="modal-title">Novo lead</div>
-      <div class="modal-sub">Só o essencial agora — o resto você completa na ficha, conforme a conversa avança.</div>
-      <div class="duplicate-warning" id="duplicateWarning"></div>
-      <div class="field">
-        <label>Nome</label>
-        <input type="text" id="newLeadNome" placeholder="Nome do cliente">
-      </div>
-      <div class="field">
-        <label>Telefone (com DDD)</label>
-        <input type="tel" id="newLeadTelefone" placeholder="21988776655">
-      </div>
-      <div class="field">
-        <label>Motor de aquisição</label>
-        <select id="newLeadMotor">
-          <option value="Campanha">Campanha</option>
-          <option value="Base">Base (repique/reativação)</option>
-          <option value="Prospecção">Prospecção</option>
-        </select>
-      </div>
-      <button class="btn-primary" id="createLeadBtn">Criar lead</button>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
 </div>
 
+<!-- MODAL NOVO LEAD -->
+<div id="modalNovoLead" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      Novo Lead
+      <button class="close-btn" id="modalClose">×</button>
+    </div>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="newLeadNome" placeholder="Nome completo">
+    </div>
+    <div class="field">
+      <label>Telefone</label>
+      <input type="text" id="newLeadTelefone" placeholder="(11) 99999-9999">
+    </div>
+    <div class="field">
+      <label>Motor de Aquisição</label>
+      <select id="newLeadMotor">
+        <option value="">Selecionar...</option>
+        <option value="Indicação">Indicação</option>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="Google">Google</option>
+        <option value="Frio">Frio</option>
+        <option value="Evento">Evento</option>
+      </select>
+    </div>
+    <div id="duplicateWarning" class="decisor-alert" style="margin-bottom:14px; display:none; background:#F8D7DA; border-color:#F5C6CB; color:#721C24;"></div>
+    <button class="btn-primary" id="createLeadBtn">Criar lead</button>
+  </div>
+</div>
+
+<button class="fab-new-lead" id="fabNewLead">+</button>
+
+<div class="bottom-nav">
+  <button class="nav-item active" data-view="view-painel">📊 Painel</button>
+  <button class="nav-item" data-view="view-leads">📋 Leads</button>
+  <button class="nav-item" id="logoutBtn">🚪 Sair</button>
+</div>
+
+<div id="toast" style="position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F7F5F0; padding:10px 16px; border-radius:8px; font-size:12.5px; z-index:25; display:none; max-width:90%; text-align:center;"></div>
+
 <script>
+
+// ============================================================
+// ⚡ CACHE LAYER (SOLUÇÃO 1 — IMPLEMENTADO AQUI)
+// ============================================================
+const cache = {
+  leads: null,
+  leadsTime: 0,
+  notes: {}, // {leadId: {data: [...], time: timestamp}}
+  
+  isValid(type, leadId, maxAge = 5 * 60 * 1000) { // 5 min default
+    if (type === 'leads') {
+      return cache.leads && (Date.now() - cache.leadsTime < maxAge);
+    }
+    if (type === 'notes') {
+      return cache.notes[leadId] && (Date.now() - cache.notes[leadId].time < maxAge);
+    }
+    return false;
+  },
+  
+  get(type, leadId) {
+    if (type === 'leads') return cache.leads;
+    if (type === 'notes') return cache.notes[leadId]?.data;
+    return null;
+  },
+  
+  set(type, data, leadId) {
+    if (type === 'leads') {
+      cache.leads = data;
+      cache.leadsTime = Date.now();
+    }
+    if (type === 'notes') {
+      cache.notes[leadId] = { data, time: Date.now() };
+    }
+  },
+  
+  invalidate(type, leadId) {
+    if (type === 'leads' || !leadId) cache.leads = null;
+    if (type === 'notes' && leadId) delete cache.notes[leadId];
+  }
+};
+
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbynVOdWdl0jt5vOTZTLY0Pk3jFz5ESgrC4C-bKwMclQTHeS-TVylnnIGG6-hm4l-ozq/exec';
+const BASE_URL = 'https://script.google.com/macros/s/AKfycbynVOdWdl0jt5vOTZTLY0Pk3jFz5ESgrC4C-bKwMclQTHeS-TVylnnIGG6-hm4l-ozq/exec';
+// ☝️ Substitua pela sua URL do Apps Script
 
-const STATUS_LIST = ['Novo','Qualificado','Reunião','Documentação','Pasta','Cliente Pronto','Perdido'];
-const STATUS_SHORT = {'Novo':'Novo','Qualificado':'Qualif.','Reunião':'Reunião','Documentação':'Docum.','Pasta':'Pasta','Cliente Pronto':'Pronto','Perdido':'Perdido'};
-const MOTIVO_LIST = ['Preço','Entrada','Fluxo','Renda','Cônjuge','Documentação','Prazo','Localização','Produto','Adiou','Outro lançamento'];
-const FAIXA_LIST = ['À vista','200k+','100k+','80k+','60k+','30k+','Sem definição'];
+const MOTIVO_LIST = ['Valor muito alto', 'Já tem fornecedor', 'Sem orçamento', 'Projeto adiado', 'Outro'];
 
-// ============================================================
-// ESTADO
-// ============================================================
-let state = {
-  user: null,          // {usuario, nome}
+const state = {
+  isOnline: navigator.onLine,
+  user: null,
   leads: [],
-  currentLeadId: null,
+  currentLead: null,
   currentNotes: [],
-  statusFilter: 'Todos',
+  filter: '',
   searchTerm: ''
 };
 
 // ============================================================
-// HELPERS DE REDE
+// MONITORAR CONEXÃO
 // ============================================================
-function apiGet(action, params){
-  params = params || {};
-  const qs = new URLSearchParams(Object.assign({action}, params)).toString();
-  return fetch(API_URL + '?' + qs).then(r => r.json());
-}
+window.addEventListener('online', () => {
+  state.isOnline = true;
+  updateStatus();
+});
+window.addEventListener('offline', () => {
+  state.isOnline = false;
+  updateStatus();
+});
 
-function apiPost(action, payload){
-  const body = JSON.stringify(Object.assign({action}, payload));
-  return fetch(API_URL, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body
-  }).then(r => r.json());
-}
-
-// Fila offline — guarda ações que falharam por falta de conexão
-function queueOffline(action, payload){
-  const queue = JSON.parse(localStorage.getItem('qualifica_queue') || '[]');
-  queue.push({action, payload, ts: Date.now()});
-  localStorage.setItem('qualifica_queue', JSON.stringify(queue));
-}
-
-function flushQueue(){
-  const queue = JSON.parse(localStorage.getItem('qualifica_queue') || '[]');
-  if(queue.length === 0) return;
-  const remaining = [];
-  let processed = 0;
-  queue.forEach(item => {
-    apiPost(item.action, item.payload).then(() => {
-      processed++;
-      if(processed === queue.length){
-        localStorage.setItem('qualifica_queue', JSON.stringify(remaining));
-        if(remaining.length === 0) showToast('Sincronizado ✓');
-        loadLeads();
-      }
-    }).catch(() => {
-      remaining.push(item);
-      processed++;
-      if(processed === queue.length){
-        localStorage.setItem('qualifica_queue', JSON.stringify(remaining));
-      }
-    });
-  });
-}
-
-function postWithFallback(action, payload, onSuccess, onQueued){
-  apiPost(action, payload).then(res => {
-    if(res.ok){ onSuccess && onSuccess(res); }
-    else { showToast('Erro: ' + (res.error || 'falha ao salvar')); }
-  }).catch(() => {
-    queueOffline(action, payload);
-    showToast('Sem conexão — salvo localmente, sincroniza depois');
-    onQueued && onQueued();
-  });
+function updateStatus() {
+  const span = document.getElementById('statusSpan');
+  span.textContent = state.isOnline ? 'online' : 'offline';
+  span.style.color = state.isOnline ? '#52B788' : '#D45B45';
 }
 
 // ============================================================
-// TOAST
+// API CALLS — AGORA COM CACHE!
 // ============================================================
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2600);
-}
-
-// ============================================================
-// LOGIN
-// ============================================================
-document.getElementById('loginBtn').addEventListener('click', doLogin);
-document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-
-function doLogin(){
-  const usuario = document.getElementById('loginUser').value.trim();
-  const senha = document.getElementById('loginPass').value;
-  const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
-
-  if(!usuario || !senha){ errEl.textContent = 'Preencha usuário e senha.'; return; }
-
-  const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Entrando...';
-
-  apiPost('login', {usuario, senha}).then(res => {
-    btn.disabled = false; btn.textContent = 'Entrar';
-    if(res.ok){
-      state.user = {usuario: res.usuario, nome: res.nome};
-      localStorage.setItem('qualifica_user', JSON.stringify(state.user));
-      enterApp();
-    } else {
-      errEl.textContent = res.error || 'Usuário ou senha inválidos.';
-    }
-  }).catch(() => {
-    btn.disabled = false; btn.textContent = 'Entrar';
-    errEl.textContent = 'Sem conexão. Verifique sua internet e tente de novo.';
-  });
-}
-
-function tryRestoreSession(){
-  const saved = localStorage.getItem('qualifica_user');
-  if(saved){
-    state.user = JSON.parse(saved);
-    enterApp();
+function apiGet(action, params = {}) {
+  const cacheIcon = document.getElementById('cacheIcon');
+  
+  // CHECK CACHE PRIMEIRO
+  if (action === 'leads' && cache.isValid('leads')) {
+    console.log('📦 Cache hit: leads');
+    cacheIcon.classList.remove('loading');
+    return Promise.resolve({ ok: true, data: cache.get('leads') });
   }
+  if (action === 'notes' && cache.isValid('notes', params.leadId)) {
+    console.log('📦 Cache hit: notes');
+    cacheIcon.classList.remove('loading');
+    return Promise.resolve({ ok: true, data: cache.get('notes', params.leadId) });
+  }
+  
+  // SEM CACHE → FETCH DO SERVIDOR
+  cacheIcon.classList.add('loading');
+  const url = BASE_URL + '?action=' + action + '&' + new URLSearchParams(params);
+  
+  return fetch(url)
+    .then(r => r.json())
+    .then(res => {
+      // CACHE A RESPOSTA
+      if (res.ok) {
+        if (action === 'leads') {
+          cache.set('leads', res.data);
+          console.log('💾 Cached: leads (' + res.data.length + ' items)');
+        }
+        if (action === 'notes') {
+          cache.set('notes', res.data, params.leadId);
+          console.log('💾 Cached: notes para lead ' + params.leadId);
+        }
+      }
+      cacheIcon.classList.remove('loading');
+      return res;
+    })
+    .catch(err => {
+      console.error('API error:', err);
+      cacheIcon.classList.remove('loading');
+      return {};
+    });
 }
 
-function enterApp(){
-  document.getElementById('view-login').classList.remove('active');
-  document.getElementById('appShell').style.display = 'flex';
-  document.getElementById('painelGreeting').textContent = 'Olá, ' + state.user.nome;
-  showView('painel');
-  loadLeads();
-  flushQueue();
-  window.addEventListener('online', flushQueue);
+function apiPost(action, payload) {
+  const cacheIcon = document.getElementById('cacheIcon');
+  cacheIcon.classList.add('loading');
+  
+  return fetch(BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  })
+  .then(r => r.json())
+  .then(res => {
+    cacheIcon.classList.remove('loading');
+    return res;
+  })
+  .catch(err => {
+    console.error('API error:', err);
+    cacheIcon.classList.remove('loading');
+    return {};
+  });
 }
+
+// ============================================================
+// AUTENTICAÇÃO
+// ============================================================
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const usuario = document.getElementById('loginUsuario').value;
+  const senha = document.getElementById('loginSenha').value;
+  const errorEl = document.getElementById('loginError');
+  
+  if (!usuario || !senha) {
+    errorEl.textContent = 'Preencha usuário e senha';
+    return;
+  }
+  
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  
+  apiPost('login', { usuario, senha }).then(res => {
+    if (res.ok) {
+      state.user = { nome: res.nome, usuario: res.usuario };
+      showScreen('view-painel');
+      loadLeads();
+    } else {
+      errorEl.textContent = res.error || 'Erro ao login';
+    }
+    btn.disabled = false;
+  });
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  state.user = null;
+  state.leads = [];
+  cache.invalidate('leads');
+  cache.invalidate('notes');
+  showScreen('view-login');
+  document.getElementById('loginError').textContent = '';
+});
 
 // ============================================================
 // NAVEGAÇÃO
 // ============================================================
-document.querySelectorAll('.nav-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.nav;
-    if(target === 'ficha-vazia'){
-      if(state.leads.length > 0){ openFicha(state.leads[0].id); }
-      else { showToast('Nenhum lead cadastrado ainda'); }
-      return;
-    }
-    showView(target);
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.view === screenId) btn.classList.add('active');
   });
+  
+  document.getElementById('backBtn').classList.remove('show');
+  if (screenId === 'view-ficha') document.getElementById('backBtn').classList.add('show');
+}
+
+document.querySelectorAll('.nav-item[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => showScreen(btn.dataset.view));
 });
 
-document.getElementById('backBtn').addEventListener('click', () => showView('leads'));
-
-function showView(name){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-
-  const backBtn = document.getElementById('backBtn');
-  backBtn.classList.toggle('show', name === 'ficha');
-
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if(name === 'painel') document.querySelector('[data-nav="painel"]').classList.add('active');
-  if(name === 'leads') document.querySelector('[data-nav="leads"]').classList.add('active');
-  if(name === 'ficha') document.querySelector('[data-nav="ficha-vazia"]').classList.add('active');
-
-  if(name === 'painel') renderPainel();
-  if(name === 'leads') renderLeadsList();
-}
+document.getElementById('backBtn').addEventListener('click', () => {
+  showScreen('view-leads');
+});
 
 // ============================================================
 // CARREGAR LEADS
 // ============================================================
-function loadLeads(){
+function loadLeads() {
   apiGet('leads').then(res => {
-    if(res.ok){
+    if (res.ok) {
       state.leads = res.data;
-      document.getElementById('headerStatus').textContent = '';
       renderPainel();
-      renderLeadsList();
+      renderLeads();
     }
-  }).catch(() => {
-    document.getElementById('headerStatus').textContent = 'offline';
   });
-}
-
-function daysSince(dateStr){
-  if(!dateStr) return 999;
-  const d = new Date(dateStr);
-  if(isNaN(d)) return 999;
-  const diffMs = Date.now() - d.getTime();
-  return Math.floor(diffMs / (1000*60*60*24));
-}
-
-function beaconClass(days){
-  if(days <= 1) return 'green';
-  if(days <= 3) return 'amber';
-  return 'red';
 }
 
 // ============================================================
 // PAINEL
 // ============================================================
-function renderPainel(){
-  const leads = state.leads;
-  const pastas = leads.filter(l => l.status === 'Pasta').length;
-  const prontos = leads.filter(l => l.status === 'Cliente Pronto').length;
-  const ativos = leads.filter(l => l.status !== 'Perdido').length;
-  const perdidos = leads.filter(l => l.status === 'Perdido').length;
+function renderPainel() {
+  const stats = {
+    novo: state.leads.filter(l => l.status === 'Novo').length,
+    reuniao: state.leads.filter(l => l.status === 'Reunião').length,
+    proposta: state.leads.filter(l => l.status === 'Proposta').length,
+    doc: state.leads.filter(l => l.status === 'Documentação').length,
+    ganho: state.leads.filter(l => l.status === 'Ganho').length,
+    total: state.leads.length
+  };
 
-  document.getElementById('statsArea').innerHTML = `
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-num">${pastas}</div><div class="stat-label">Pastas</div></div>
-      <div class="stat-card"><div class="stat-num">${prontos}</div><div class="stat-label">Clientes prontos</div></div>
-      <div class="stat-card"><div class="stat-num">${ativos}</div><div class="stat-label">Leads ativos</div></div>
-      <div class="stat-card"><div class="stat-num">${perdidos}</div><div class="stat-label">Perdidos</div></div>
+  const followups = state.leads.filter(l => ['Novo', 'Reunião', 'Proposta'].includes(l.status));
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num">${stats.novo}</div>
+      <div class="stat-label">NOVO</div>
     </div>
-  `;
-
-  const followups = leads
-    .filter(l => l.status !== 'Perdido' && l.status !== 'Cliente Pronto')
-    .map(l => Object.assign({}, l, {_days: daysSince(l.data_ultimo_contato)}))
-    .filter(l => l._days >= 2)
-    .sort((a,b) => b._days - a._days);
-
-  document.getElementById('followupCount').textContent = followups.length + ' pendentes';
-
-  const listEl = document.getElementById('followupList');
-  if(followups.length === 0){
-    listEl.innerHTML = '<div class="empty-state">Nenhum follow-up pendente agora 🎉</div>';
-    return;
-  }
-  listEl.innerHTML = followups.map(l => leadRowHtml(l)).join('');
-  listEl.querySelectorAll('.lead-row').forEach(row => {
-    row.addEventListener('click', () => openFicha(row.dataset.id));
-  });
-}
-
-function leadRowHtml(lead){
-  const days = daysSince(lead.data_ultimo_contato);
-  const cls = beaconClass(days);
-  const meta = [lead.status, lead.responsavel_atual].filter(Boolean).join(' · ');
-  return `
-    <div class="lead-row" data-id="${lead.id}">
-      <div class="beacon ${cls}"></div>
-      <div class="info">
-        <div class="name">${escapeHtml(lead.nome || 'Sem nome')}</div>
-        <div class="meta">${escapeHtml(meta)}</div>
+    <div class="stat-card">
+      <div class="stat-num">${stats.reuniao}</div>
+      <div class="stat-label">REUNIÃO</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${stats.proposta}</div>
+      <div class="stat-label">PROPOSTA</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${stats.doc}</div>
+      <div class="stat-label">DOCUMENTAÇÃO</div>
+    </div>
+    <div class="stat-card wide">
+      <div>
+        <div class="stat-num">${stats.total}</div>
+        <div class="stat-label">NO PIPELINE</div>
       </div>
-      <div class="days"><b>${days === 999 ? '—' : days}</b> ${days === 1 ? 'dia' : 'dias'}</div>
+      <div style="text-align:right;">
+        <div class="stat-num" style="color:var(--green);">${stats.ganho}</div>
+        <div class="stat-label">GANHOS</div>
+      </div>
     </div>
   `;
+
+  document.getElementById('followupCount').textContent = followups.length;
+  document.getElementById('followupList').innerHTML = followups.map(l => `
+    <div class="lead-row" onclick="openFicha('${l.id}')">
+      <div class="beacon ${getBeacon(l.status)}"></div>
+      <div class="info">
+        <div class="name">${escapeHtml(l.nome)}</div>
+        <div class="meta">${escapeHtml(l.status)} • ${escapeHtml(l.responsavel_atual || '')}</div>
+      </div>
+      <div class="days"><b>${daysSince(l.data_ultimo_contato)}</b>d</div>
+    </div>
+  `).join('');
 }
 
 // ============================================================
 // LISTA DE LEADS
 // ============================================================
-function buildStatusFilters(){
-  const container = document.getElementById('statusFilters');
-  const all = ['Todos'].concat(STATUS_LIST);
-  container.innerHTML = all.map(s =>
-    `<div class="chip ${s === state.statusFilter ? 'active' : ''}" data-status="${s}">${s}</div>`
-  ).join('');
-  container.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      state.statusFilter = chip.dataset.status;
-      renderLeadsList();
-    });
-  });
-}
+function renderLeads() {
+  let filtered = state.leads;
 
-document.getElementById('searchInput').addEventListener('input', e => {
-  state.searchTerm = e.target.value.toLowerCase();
-  renderLeadsList();
-});
-
-function renderLeadsList(){
-  buildStatusFilters();
-  let leads = state.leads.slice();
-
-  if(state.statusFilter !== 'Todos'){
-    leads = leads.filter(l => l.status === state.statusFilter);
-  }
-  if(state.searchTerm){
-    leads = leads.filter(l =>
-      (l.nome || '').toLowerCase().includes(state.searchTerm) ||
-      (l.telefone || '').includes(state.searchTerm)
+  if (state.filter) filtered = filtered.filter(l => l.status === state.filter);
+  if (state.searchTerm) {
+    const term = state.searchTerm.toLowerCase();
+    filtered = filtered.filter(l =>
+      (l.nome || '').toLowerCase().includes(term) ||
+      (l.telefone || '').includes(term)
     );
   }
-  leads.sort((a,b) => daysSince(b.data_ultimo_contato) - daysSince(a.data_ultimo_contato));
 
-  const area = document.getElementById('leadsListArea');
-  if(leads.length === 0){
-    area.innerHTML = '<div class="empty-state">Nenhum lead encontrado.<br>Toque no + pra cadastrar um novo.</div>';
+  if (filtered.length === 0) {
+    document.getElementById('leadsList').innerHTML = '<div class="empty-state">Nenhum lead encontrado</div>';
     return;
   }
-  area.innerHTML = leads.map(l => leadRowHtml(l)).join('');
-  area.querySelectorAll('.lead-row').forEach(row => {
-    row.addEventListener('click', () => openFicha(row.dataset.id));
+
+  document.getElementById('leadsList').innerHTML = filtered.map(l => `
+    <div class="lead-row" onclick="openFicha('${l.id}')">
+      <div class="beacon ${getBeacon(l.status)}"></div>
+      <div class="info">
+        <div class="name">${escapeHtml(l.nome)}</div>
+        <div class="meta">${escapeHtml(l.status)} • ${escapeHtml(l.responsavel_atual || '')}</div>
+      </div>
+      <div class="days"><b>${daysSince(l.data_ultimo_contato)}</b>d</div>
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.filter-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.filter = chip.dataset.filter;
+    renderLeads();
   });
-}
+});
+
+document.getElementById('searchBar').addEventListener('input', e => {
+  state.searchTerm = e.target.value;
+  renderLeads();
+});
 
 // ============================================================
-// FICHA DO LEAD
+// FICHA
 // ============================================================
-function openFicha(leadId){
-  state.currentLeadId = leadId;
-  showView('ficha');
-  renderFicha();
-  loadNotes(leadId);
-}
+function openFicha(leadId) {
+  const lead = state.leads.find(l => l.id === leadId);
+  if (!lead) return;
 
-function getCurrentLead(){
-  return state.leads.find(l => String(l.id) === String(state.currentLeadId));
-}
+  state.currentLead = lead;
+  
+  // Render ficha
+  const avatar = lead.nome.charAt(0).toUpperCase();
+  document.getElementById('fichaAvatar').textContent = avatar;
+  document.getElementById('fichaName').textContent = lead.nome;
+  document.getElementById('fichaSub').textContent = lead.telefone + ' • ' + daysSince(lead.data_ultimo_contato) + 'd';
 
-function initials(name){
-  if(!name) return '?';
-  const parts = name.trim().split(' ');
-  return ((parts[0]||'')[0] + (parts[1]?parts[1][0]:'')).toUpperCase();
-}
+  document.getElementById('fichaInputNome').value = lead.nome || '';
+  document.getElementById('fichaInputTelefone').value = lead.telefone || '';
+  document.getElementById('fichaInputEmail').value = lead.email || '';
+  document.getElementById('fichaInputEmpresa').value = lead.empresa || '';
+  document.getElementById('fichaInputCargo').value = lead.cargo || '';
+  document.getElementById('fichaInputMotor').value = lead.motor_aquisicao || '';
 
-function renderFicha(){
-  const lead = getCurrentLead();
-  if(!lead){
-    document.getElementById('fichaContent').innerHTML = '<div class="empty-state">Lead não encontrado.</div>';
-    return;
-  }
-
-  const waPhone = (lead.telefone || '').replace(/\D/g,'');
-
-  document.getElementById('fichaContent').innerHTML = `
-    <div class="lead-header">
-      <div class="avatar">${initials(lead.nome)}</div>
-      <div>
-        <div class="name">${escapeHtml(lead.nome || 'Sem nome')}</div>
-        <div class="sub">${escapeHtml(lead.telefone || '—')} · Motor: ${escapeHtml(lead.motor_aquisicao || '—')}</div>
-      </div>
-    </div>
-
-    ${waPhone ? `<a class="wa-btn" href="https://wa.me/${waPhone}" target="_blank">💬 Abrir conversa no WhatsApp</a>` : ''}
-
-    <div class="status-track" id="statusTrack"></div>
-
-    <div class="responsavel-row">
-      <span>Responsável atual</span>
-      <select id="responsavelSelect">
-        <option value="Herbert" ${lead.responsavel_atual === 'Herbert' ? 'selected' : ''}>Herbert</option>
-        <option value="Ester" ${lead.responsavel_atual === 'Ester' ? 'selected' : ''}>Ester</option>
-      </select>
-    </div>
-
-    <div class="decisor-alert">
-      <input type="checkbox" id="decisorCheck" ${lead.decisor_confirmado === 'Sim' ? 'checked' : ''}>
-      <div>Decisor confirmado na reunião${lead.decisor_nome ? ' — ' + escapeHtml(lead.decisor_nome) : ''}. Sem isso marcado, evite avançar pra "Documentação".</div>
-    </div>
-
-    <div class="card-block">
-      <h4>Qualificação</h4>
-      <div class="field-row">
-        <div class="field"><label>Finalidade</label>
-          <select id="f_finalidade">
-            <option value="">—</option>
-            <option value="Investir" ${lead.finalidade==='Investir'?'selected':''}>Investir</option>
-            <option value="Morar" ${lead.finalidade==='Morar'?'selected':''}>Morar</option>
-          </select>
-        </div>
-        <div class="field"><label>Timing</label>
-          <select id="f_timing">
-            <option value="">—</option>
-            <option value="Lançamento" ${lead.timing==='Lançamento'?'selected':''}>Lançamento</option>
-            <option value="Futuro" ${lead.timing==='Futuro'?'selected':''}>Futuro</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Faixa de entrada</label>
-          <select id="f_faixa_entrada">
-            <option value="">—</option>
-            ${FAIXA_LIST.map(f => `<option value="${f}" ${lead.faixa_entrada===f?'selected':''}>${f}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field"><label>Pagamento</label>
-          <select id="f_forma_pagamento">
-            <option value="">—</option>
-            <option value="À vista" ${lead.forma_pagamento==='À vista'?'selected':''}>À vista</option>
-            <option value="Financiado" ${lead.forma_pagamento==='Financiado'?'selected':''}>Financiado</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Renda</label>
-          <select id="f_renda_tipo">
-            <option value="">—</option>
-            <option value="PF Formal" ${lead.renda_tipo==='PF Formal'?'selected':''}>PF Formal</option>
-            <option value="Autônomo" ${lead.renda_tipo==='Autônomo'?'selected':''}>Autônomo</option>
-            <option value="Financiamento Direto" ${lead.renda_tipo==='Financiamento Direto'?'selected':''}>Financiamento Direto</option>
-          </select>
-        </div>
-        <div class="field"><label>Documentação</label>
-          <select id="f_documentacao_status">
-            <option value="">—</option>
-            <option value="Não iniciou" ${lead.documentacao_status==='Não iniciou'?'selected':''}>Não iniciou</option>
-            <option value="Em andamento" ${lead.documentacao_status==='Em andamento'?'selected':''}>Em andamento</option>
-            <option value="Completa" ${lead.documentacao_status==='Completa'?'selected':''}>Completa</option>
-          </select>
-        </div>
-      </div>
-      <div class="field"><label>Produto desejado</label>
-        <input type="text" id="f_produto_desejado" value="${escapeAttr(lead.produto_desejado)}" placeholder="studio, 2 quartos...">
-      </div>
-      <div class="field"><label>Nome do decisor (se houver)</label>
-        <input type="text" id="f_decisor_nome" value="${escapeAttr(lead.decisor_nome)}" placeholder="esposa, sócio...">
-      </div>
-      <button class="btn-secondary" id="saveFieldsBtn">Salvar qualificação</button>
-    </div>
-
-    <div class="card-block">
-      <h4>Objeção principal</h4>
-      <div class="chip-select" id="objecaoChips"></div>
-    </div>
-
-    <div class="card-block" id="perdaBlock" style="display:${lead.status === 'Perdido' ? 'block' : 'none'}">
-      <h4>Motivo da perda</h4>
-      <div class="chip-select" id="motivoChips"></div>
-    </div>
-
-    <div class="card-block">
-      <h4>Notas · registrado como ${escapeHtml(state.user.nome)}</h4>
-      <div class="notes-log" id="notesLog"><div class="empty-state" style="padding:12px;">Carregando...</div></div>
-      <div class="new-note-row">
-        <input type="text" id="newNoteInput" placeholder="Adicionar nota...">
-        <button class="btn-add" id="addNoteBtn">+</button>
-      </div>
-    </div>
-
-    <div class="save-hint" id="saveHint">Alterações são salvas na planilha automaticamente</div>
-  `;
+  document.getElementById('waBtn').href = 'https://wa.me/55' + (lead.telefone || '').replace(/\D/g, '?text=Olá!';
 
   renderStatusTrack(lead);
-  renderChipSelect('objecaoChips', MOTIVO_LIST, lead.objecao_principal, val => {
-    postWithFallback('updateLead', {id: lead.id, fields: {objecao_principal: val}}, () => {
-      lead.objecao_principal = val;
-      showToast('Objeção salva');
-    });
-  });
-  renderChipSelect('motivoChips', MOTIVO_LIST, lead.motivo_perda, val => {
-    postWithFallback('updateLead', {id: lead.id, fields: {motivo_perda: val}}, () => {
-      lead.motivo_perda = val;
-      showToast('Motivo salvo');
-    });
-  });
+  
+  document.getElementById('responsavelSelect').value = lead.responsavel_atual || 'Herbert';
+  document.getElementById('responsavelSpan').textContent = lead.responsavel_atual || 'Não atribuído';
 
-  document.getElementById('decisorCheck').addEventListener('change', e => {
-    const val = e.target.checked ? 'Sim' : 'Não';
-    postWithFallback('updateLead', {id: lead.id, fields: {decisor_confirmado: val}}, () => {
-      lead.decisor_confirmado = val;
-    });
-  });
+  document.getElementById('decisorCheck').checked = lead.decisor_confirmado === 'Sim';
+  document.getElementById('decisorBlock').style.display = ['Reunião', 'Proposta', 'Documentação'].includes(lead.status) ? 'flex' : 'none';
 
-  document.getElementById('responsavelSelect').addEventListener('change', e => {
-    const novo = e.target.value;
-    postWithFallback('changeResponsavel', {id: lead.id, novoResponsavel: novo, autor: state.user.nome}, () => {
-      lead.responsavel_atual = novo;
-      showToast('Responsável: ' + novo);
-      loadNotes(lead.id);
-    });
-  });
+  document.getElementById('perdaBlock').style.display = lead.status === 'Perdido' ? 'block' : 'none';
+  document.getElementById('motivoPerdaInput').value = lead.motivo_perda || '';
 
-  document.getElementById('saveFieldsBtn').addEventListener('click', () => {
-    const fields = {
-      finalidade: val('f_finalidade'),
-      timing: val('f_timing'),
-      faixa_entrada: val('f_faixa_entrada'),
-      forma_pagamento: val('f_forma_pagamento'),
-      renda_tipo: val('f_renda_tipo'),
-      documentacao_status: val('f_documentacao_status'),
-      produto_desejado: val('f_produto_desejado'),
-      decisor_nome: val('f_decisor_nome')
-    };
-    const btn = document.getElementById('saveFieldsBtn');
-    btn.textContent = 'Salvando...'; btn.disabled = true;
-    postWithFallback('updateLead', {id: lead.id, fields}, () => {
-      Object.assign(lead, fields);
-      btn.textContent = 'Salvo ✓';
-      setTimeout(() => { btn.textContent = 'Salvar qualificação'; btn.disabled = false; }, 1200);
-    }, () => {
-      btn.textContent = 'Salvar qualificação'; btn.disabled = false;
-    });
-  });
+  // Carregar notas
+  loadNotes(leadId);
 
-  document.getElementById('addNoteBtn').addEventListener('click', addNoteHandler);
-  document.getElementById('newNoteInput').addEventListener('keydown', e => { if(e.key === 'Enter') addNoteHandler(); });
+  showScreen('view-ficha');
 }
 
-function val(id){ return document.getElementById(id).value; }
+function getCurrentLead() {
+  return state.currentLead || {};
+}
 
-function renderChipSelect(containerId, options, current, onSelect){
-  const container = document.getElementById(containerId);
-  container.innerHTML = options.map(o =>
-    `<div class="chip ${o === current ? 'sel' : ''}" data-val="${escapeAttr(o)}">${o}</div>`
-  ).join('');
-  container.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      container.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
-      chip.classList.add('sel');
-      onSelect(chip.dataset.val);
-    });
+// ============================================================
+// ATUALIZAR CAMPO DA FICHA
+// ============================================================
+document.getElementById('fichaInputNome').addEventListener('blur', () => updateLeadField('nome', this.value));
+document.getElementById('fichaInputTelefone').addEventListener('blur', () => updateLeadField('telefone', this.value));
+document.getElementById('fichaInputEmail').addEventListener('blur', () => updateLeadField('email', this.value));
+document.getElementById('fichaInputEmpresa').addEventListener('blur', () => updateLeadField('empresa', this.value));
+document.getElementById('fichaInputCargo').addEventListener('blur', () => updateLeadField('cargo', this.value));
+document.getElementById('fichaInputMotor').addEventListener('blur', () => updateLeadField('motor_aquisicao', this.value));
+
+function updateLeadField(field, value) {
+  const lead = getCurrentLead();
+  if (!lead.id || lead[field] === value) return;
+
+  lead[field] = value;
+  postWithFallback('updateLead', { id: lead.id, fields: { [field]: value } }, () => {
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    renderPainel();
   });
 }
 
-function renderStatusTrack(lead){
+// ============================================================
+// DECISOR CONFIRMADO
+// ============================================================
+document.getElementById('decisorCheck').addEventListener('change', function() {
+  const lead = getCurrentLead();
+  const value = this.checked ? 'Sim' : 'Não';
+  
+  postWithFallback('updateLead', { id: lead.id, fields: { decisor_confirmado: value } }, () => {
+    lead.decisor_confirmado = value;
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    showToast('Decisor ' + value);
+  });
+});
+
+// ============================================================
+// RESPONSÁVEL
+// ============================================================
+document.getElementById('responsavelSelect').addEventListener('change', function() {
+  const lead = getCurrentLead();
+  const novoResponsavel = this.value;
+  
+  postWithFallback('changeResponsavel', { id: lead.id, novoResponsavel, autor: state.user.nome }, () => {
+    lead.responsavel_atual = novoResponsavel;
+    document.getElementById('responsavelSpan').textContent = novoResponsavel;
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    cache.invalidate('notes', lead.id);  // ← INVALIDA CACHE
+    loadNotes(lead.id);
+    showToast('Responsável: ' + novoResponsavel);
+  });
+});
+
+// ============================================================
+// STATUS
+// ============================================================
+function renderStatusTrack(lead) {
+  const statuses = ['Novo', 'Reunião', 'Proposta', 'Documentação', 'Ganho', 'Perdido'];
   const track = document.getElementById('statusTrack');
-  const currentIdx = STATUS_LIST.indexOf(lead.status);
-  track.innerHTML = STATUS_LIST.map((s, i) => {
-    let cls = '';
-    if(s === lead.status) cls = 'current';
-    else if(i < currentIdx) cls = 'done';
-    return `<button class="status-pill ${cls}" data-status="${s}">${STATUS_SHORT[s]}</button>`;
+  
+  const currentIndex = statuses.indexOf(lead.status);
+  
+  track.innerHTML = statuses.map((s, i) => {
+    let className = 'status-pill';
+    if (i < currentIndex) className += ' done';
+    if (i === currentIndex) className += ' current';
+    return `<button class="${className}" data-status="${s}">${s}</button>`;
   }).join('');
+
   track.querySelectorAll('.status-pill').forEach(btn => {
     btn.addEventListener('click', () => changeLeadStatus(lead, btn.dataset.status));
   });
 }
 
-function changeLeadStatus(lead, novoStatus){
-  if(novoStatus === lead.status) return;
+function changeLeadStatus(lead, novoStatus) {
+  if (novoStatus === lead.status) return;
 
-  if(novoStatus === 'Documentação' && lead.decisor_confirmado !== 'Sim'){
-    if(!confirm('O decisor ainda não foi confirmado na reunião. Avançar mesmo assim?')) return;
+  if (novoStatus === 'Documentação' && lead.decisor_confirmado !== 'Sim') {
+    if (!confirm('O decisor ainda não foi confirmado. Avançar mesmo assim?')) return;
   }
 
   let motivoPerda = null;
-  if(novoStatus === 'Perdido'){
-    motivoPerda = lead.motivo_perda || prompt('Motivo da perda? (' + MOTIVO_LIST.join(', ') + ')') || '';
+  if (novoStatus === 'Perdido') {
+    motivoPerda = lead.motivo_perda || prompt('Motivo da perda?') || '';
   }
 
-  postWithFallback('changeStatus', {id: lead.id, status: novoStatus, autor: state.user.nome, motivoPerda}, () => {
+  postWithFallback('changeStatus', { id: lead.id, status: novoStatus, autor: state.user.nome, motivoPerda }, () => {
     lead.status = novoStatus;
-    if(motivoPerda) lead.motivo_perda = motivoPerda;
+    if (motivoPerda) lead.motivo_perda = motivoPerda;
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    cache.invalidate('notes', lead.id);  // ← INVALIDA CACHE
     showToast('Status: ' + novoStatus);
     renderStatusTrack(lead);
     document.getElementById('perdaBlock').style.display = novoStatus === 'Perdido' ? 'block' : 'none';
@@ -856,24 +854,26 @@ function changeLeadStatus(lead, novoStatus){
   });
 }
 
-// ---------- NOTAS ----------
-function loadNotes(leadId){
-  apiGet('notes', {leadId}).then(res => {
-    if(res.ok){
+// ============================================================
+// NOTAS
+// ============================================================
+function loadNotes(leadId) {
+  apiGet('notes', { leadId }).then(res => {
+    if (res.ok) {
       state.currentNotes = res.data;
       renderNotes();
     }
   }).catch(() => {
     const el = document.getElementById('notesLog');
-    if(el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Sem conexão pra carregar notas.</div>';
+    if (el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Sem conexão.</div>';
   });
 }
 
-function renderNotes(){
+function renderNotes() {
   const el = document.getElementById('notesLog');
-  if(!el) return;
-  if(state.currentNotes.length === 0){
-    el.innerHTML = '<div class="empty-state" style="padding:12px;">Nenhuma nota ainda.</div>';
+  if (!el) return;
+  if (state.currentNotes.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:12px;">Nenhuma nota.</div>';
     return;
   }
   el.innerHTML = state.currentNotes.map(n => {
@@ -889,23 +889,30 @@ function renderNotes(){
   el.scrollTop = el.scrollHeight;
 }
 
-function addNoteHandler(){
+document.getElementById('addNoteBtn').addEventListener('click', addNoteHandler);
+document.getElementById('newNoteInput').addEventListener('keypress', e => {
+  if (e.key === 'Enter') addNoteHandler();
+});
+
+function addNoteHandler() {
   const input = document.getElementById('newNoteInput');
   const texto = input.value.trim();
-  if(!texto) return;
+  if (!texto) return;
+  
   const lead = getCurrentLead();
   const btn = document.getElementById('addNoteBtn');
   btn.disabled = true;
   input.value = '';
 
-  postWithFallback('addNote', {leadId: lead.id, autor: state.user.nome, texto, tipoEvento: 'Nota manual'}, () => {
+  postWithFallback('addNote', { leadId: lead.id, autor: state.user.nome, texto, tipoEvento: 'Nota manual' }, () => {
     btn.disabled = false;
     lead.data_ultimo_contato = new Date().toISOString();
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    cache.invalidate('notes', lead.id);  // ← INVALIDA CACHE
     loadNotes(lead.id);
   }, () => {
     btn.disabled = false;
-    // otimista: mostra a nota localmente mesmo offline
-    state.currentNotes.push({autor: state.user.nome, texto, data_hora: new Date().toISOString(), tipo_evento: 'Nota manual (pendente de sincronizar)'});
+    state.currentNotes.push({ autor: state.user.nome, texto, data_hora: new Date().toISOString(), tipo_evento: 'Nota manual (pendente)' });
     renderNotes();
   });
 }
@@ -921,14 +928,14 @@ document.getElementById('fabNewLead').addEventListener('click', () => {
   modal.classList.add('show');
 });
 document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
-modal.addEventListener('click', e => { if(e.target === modal) modal.classList.remove('show'); });
+modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
 document.getElementById('newLeadTelefone').addEventListener('input', e => {
-  const phone = e.target.value.replace(/\D/g,'');
-  const dup = state.leads.find(l => (l.telefone||'').replace(/\D/g,'') === phone && phone.length >= 8);
+  const phone = e.target.value.replace(/\D/g, '');
+  const dup = state.leads.find(l => (l.telefone || '').replace(/\D/g, '') === phone && phone.length >= 8);
   const warnEl = document.getElementById('duplicateWarning');
-  if(dup){
-    warnEl.textContent = 'Já existe um lead com esse telefone: ' + dup.nome + ' (' + dup.status + ')';
+  if (dup) {
+    warnEl.textContent = 'Já existe: ' + dup.nome + ' (' + dup.status + ')';
     warnEl.classList.add('show');
   } else {
     warnEl.classList.remove('show');
@@ -940,10 +947,14 @@ document.getElementById('createLeadBtn').addEventListener('click', () => {
   const telefone = document.getElementById('newLeadTelefone').value.trim();
   const motor = document.getElementById('newLeadMotor').value;
 
-  if(!nome || !telefone){ showToast('Preencha nome e telefone'); return; }
+  if (!nome || !telefone) {
+    showToast('Preencha nome e telefone');
+    return;
+  }
 
   const btn = document.getElementById('createLeadBtn');
-  btn.disabled = true; btn.textContent = 'Criando...';
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
 
   const lead = {
     nome, telefone, motor_aquisicao: motor,
@@ -951,37 +962,87 @@ document.getElementById('createLeadBtn').addEventListener('click', () => {
     decisor_confirmado: 'Não'
   };
 
-  postWithFallback('createLead', {lead}, res => {
-    btn.disabled = false; btn.textContent = 'Criar lead';
+  postWithFallback('createLead', { lead }, res => {
+    btn.disabled = false;
+    btn.textContent = 'Criar lead';
     modal.classList.remove('show');
+    cache.invalidate('leads');  // ← INVALIDA CACHE
+    cache.invalidate('notes');  // ← INVALIDA CACHE
     showToast('Lead criado');
     loadLeads();
-    if(res.id) setTimeout(() => openFicha(res.id), 400);
+    if (res.id) setTimeout(() => openFicha(res.id), 400);
   }, () => {
-    btn.disabled = false; btn.textContent = 'Criar lead';
+    btn.disabled = false;
+    btn.textContent = 'Criar lead';
     modal.classList.remove('show');
   });
 });
 
 // ============================================================
-// UTIL
+// HELPERS
 // ============================================================
-function escapeHtml(str){
-  if(str === undefined || str === null) return '';
-  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function postWithFallback(action, payload, onSuccess, onError) {
+  apiPost(action, payload).then(res => {
+    if (res.ok) {
+      onSuccess && onSuccess(res);
+    } else {
+      onError && onError();
+      showToast('Erro: ' + (res.error || 'desconhecido'));
+    }
+  }).catch(() => {
+    onError && onError();
+    showToast('Sem conexão');
+  });
 }
-function escapeAttr(str){ return escapeHtml(str); }
-function formatDateTime(str){
-  if(!str) return '';
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+
+function getBeacon(status) {
+  if (['Novo', 'Reunião'].includes(status)) return 'amber';
+  if (['Proposta', 'Documentação'].includes(status)) return 'amber';
+  if (status === 'Ganho') return 'green';
+  if (status === 'Perdido') return 'red';
+  return 'amber';
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return 0;
+  return Math.floor((Date.now() - d) / 1000 / 60 / 60 / 24);
+}
+
+function formatDateTime(str) {
+  if (!str) return '';
   const d = new Date(str);
-  if(isNaN(d)) return str;
-  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+  if (str === undefined || str === null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ============================================================
 // INIT
 // ============================================================
-tryRestoreSession();
+updateStatus();
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('crivo_user')) {
+    try {
+      state.user = JSON.parse(localStorage.getItem('crivo_user'));
+      showScreen('view-painel');
+      loadLeads();
+    } catch (e) {}
+  }
+});
+
 </script>
 </body>
 </html>

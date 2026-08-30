@@ -324,6 +324,7 @@ let state = {
   leads: [],
   currentLeadId: null,
   currentNotes: [],
+  notesCache: {},      // leadId -> notas[], evita recarregar do zero ao reabrir o mesmo lead
   statusFilter: 'Todos',
   searchTerm: ''
 };
@@ -334,16 +335,24 @@ let state = {
 function apiGet(action, params){
   params = params || {};
   const qs = new URLSearchParams(Object.assign({action}, params)).toString();
-  return fetch(API_URL + '?' + qs).then(r => r.json());
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  return fetch(API_URL + '?' + qs, {signal: controller.signal})
+    .then(r => { clearTimeout(timeoutId); return r.json(); })
+    .catch(err => { clearTimeout(timeoutId); throw err; });
 }
 
 function apiPost(action, payload){
   const body = JSON.stringify(Object.assign({action}, payload));
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
   return fetch(API_URL, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body
-  }).then(r => r.json());
+    body,
+    signal: controller.signal
+  }).then(r => { clearTimeout(timeoutId); return r.json(); })
+    .catch(err => { clearTimeout(timeoutId); throw err; });
 }
 
 // Fila offline — guarda ações que falharam por falta de conexão
@@ -619,6 +628,11 @@ function openFicha(leadId){
   state.currentLeadId = leadId;
   showView('ficha');
   renderFicha();
+  // mostra o cache local na hora (se existir) enquanto busca a versão atualizada
+  if(state.notesCache[leadId]){
+    state.currentNotes = state.notesCache[leadId];
+    renderNotes();
+  }
   loadNotes(leadId);
 }
 
@@ -878,17 +892,23 @@ function loadNotes(leadId){
   apiGet('notes', {leadId}).then(res => {
     if(res.ok){
       state.currentNotes = res.data;
-      renderNotes();
+      state.notesCache[leadId] = res.data;
+      // só re-renderiza se ainda estiver olhando o mesmo lead
+      if(state.currentLeadId === leadId) renderNotes();
     }
   }).catch(() => {
-    const el = document.getElementById('notesLog');
-    if(el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Sem conexão pra carregar notas.</div>';
+    // se já tinha cache mostrado, deixa como está; senão avisa
+    if(!state.notesCache[leadId]){
+      const el = document.getElementById('notesLog');
+      if(el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Demorou demais pra carregar. <span style="text-decoration:underline;cursor:pointer;" onclick="loadNotes(\'' + leadId + '\')">Tentar de novo</span></div>';
+    }
   });
 }
 
 function renderNotes(){
   const el = document.getElementById('notesLog');
   if(!el) return;
+  state.notesCache[state.currentLeadId] = state.currentNotes;
   if(state.currentNotes.length === 0){
     el.innerHTML = '<div class="empty-state" style="padding:12px;">Nenhuma nota ainda.</div>';
     return;

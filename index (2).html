@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Crivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#101C2C;
+  --ink-soft:#3C4A5E;
+  --paper:#EFEDE7;
+  --card:#FFFFFF;
+  --line:#DEDAD1;
+  --sand:#C9A66B;
+  --sand-deep:#A8804A;
+  --green:#2F9E68;
+  --amber:#E0A339;
+  --red:#D45B45;
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+  --radius:14px;
+}
+
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  background:var(--paper);
+  font-family:var(--font-body);
+  color:var(--ink);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+.app{ max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative; background:var(--paper);}
+
+/* ---------- HEADER ---------- */
+.app-header{
+  background:var(--ink);
+  padding:16px 18px 14px;
+  display:flex; align-items:center; justify-content:center;
+  position:relative; flex-shrink:0; position:sticky; top:0; z-index:20;
+}
+.mark{ width:26px; height:26px; border-radius:50%; border:1.5px solid #F7F5F0; position:relative;}
+.mark::after{ content:''; position:absolute; top:50%; left:50%; width:6px; height:6px; background:var(--sand); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 8px 2px rgba(201,166,107,0.7);}
+.back-btn{ position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#F7F5F0; font-size:14px; font-weight:500; background:none; border:none; cursor:pointer; display:none; align-items:center; gap:4px;}
+.back-btn.show{ display:flex; }
+.header-status{ position:absolute; right:16px; top:50%; transform:translateY(-50%); font-family:var(--font-mono); font-size:10px; color:#B9C1CC; }
+
+/* ---------- SCREENS ---------- */
+.screen{ display:none; flex:1; flex-direction:column; }
+.screen.active{ display:flex; }
+.content{ padding:20px 18px 110px; flex:1; }
+
+/* ---------- LOGIN ---------- */
+#view-login{ justify-content:center; align-items:center; padding:40px 32px; text-align:center; gap:8px; min-height:100vh;}
+#view-login .mark-lg{ width:60px; height:60px; border-radius:50%; border:1.5px solid var(--ink); position:relative; margin-bottom:26px;}
+#view-login .mark-lg::after{ content:''; position:absolute; top:50%; left:50%; width:11px; height:11px; background:var(--sand); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 14px 3px rgba(201,166,107,0.55);}
+.login-title{ font-family:var(--font-display); font-size:23px; font-weight:600; margin-bottom:2px;}
+.login-sub{ font-size:13px; color:var(--ink-soft); margin-bottom:30px;}
+.login-error{ font-size:12.5px; color:var(--red); margin-top:-6px; margin-bottom:10px; min-height:16px; }
+
+.field{ width:100%; text-align:left; margin-bottom:14px; }
+.field label{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:600; display:block; margin-bottom:6px;}
+.field input, .field select, .field textarea{
+  width:100%; border:1px solid var(--line); background:var(--card);
+  border-radius:10px; padding:12px 13px; font-size:15px; font-family:var(--font-body);
+  color:var(--ink); appearance:none;
+}
+.field textarea{ resize:vertical; min-height:60px; }
+.field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--sand); outline-offset:0; border-color:var(--sand);}
+.btn-primary{
+  width:100%; background:var(--ink); color:#F7F5F0; border:none;
+  padding:14px; border-radius:10px; font-size:15px; font-weight:600;
+  font-family:var(--font-body); cursor:pointer; margin-top:4px;
+}
+.btn-primary:disabled{ opacity:0.5; }
+.btn-primary:active{ opacity:0.85; }
+.btn-secondary{
+  width:100%; background:var(--card); color:var(--ink); border:1px solid var(--line);
+  padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px;
+}
+.login-users{ font-size:11px; color:var(--ink-soft); margin-top:18px; }
+
+/* ---------- PAINEL ---------- */
+.section-eyebrow{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--sand-deep); font-weight:600; margin-bottom:6px;}
+.page-title{ font-family:var(--font-display); font-size:21px; font-weight:600; margin-bottom:18px;}
+
+.stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px;}
+.stat-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:15px 14px;}
+.stat-num{ font-family:var(--font-mono); font-size:25px; font-weight:600; color:var(--ink); line-height:1;}
+.stat-label{ font-size:11.5px; color:var(--ink-soft); margin-top:5px;}
+.stat-card.wide{ grid-column:1 / -1; display:flex; justify-content:space-between; align-items:center; background:var(--ink);}
+.stat-card.wide .stat-num{ color:#F7F5F0; }
+.stat-card.wide .stat-label{ color:#B9C1CC; }
+
+.followup-header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
+.followup-header h3{ font-family:var(--font-display); font-size:16px; font-weight:600;}
+.followup-count{ font-family:var(--font-mono); font-size:12px; color:var(--red); font-weight:600;}
+
+.lead-row{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 14px; display:flex; align-items:center; gap:12px; margin-bottom:8px; cursor:pointer;}
+.beacon{ width:11px; height:11px; border-radius:50%; flex-shrink:0; position:relative;}
+.beacon::after{ content:''; position:absolute; inset:-4px; border-radius:50%; opacity:0.35;}
+.beacon.green{ background:var(--green);} .beacon.green::after{ background:var(--green);}
+.beacon.amber{ background:var(--amber);} .beacon.amber::after{ background:var(--amber);}
+.beacon.red{ background:var(--red);} .beacon.red::after{ background:var(--red);}
+
+.lead-row .info{ flex:1; min-width:0;}
+.lead-row .name{ font-size:14.5px; font-weight:600; color:var(--ink); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.lead-row .meta{ font-size:12px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.lead-row .days{ font-family:var(--font-mono); font-size:11px; color:var(--ink-soft); text-align:right; flex-shrink:0;}
+.lead-row .days b{ color:var(--ink); font-size:13px;}
+
+.empty-state{ text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:13.5px; }
+
+/* ---------- LEADS LIST ---------- */
+.filter-chips{ display:flex; gap:7px; overflow-x:auto; padding-bottom:14px; margin-bottom:4px; }
+.chip{ font-size:12px; font-weight:600; padding:7px 13px; border-radius:20px; background:var(--card); border:1px solid var(--line); color:var(--ink-soft); white-space:nowrap; cursor:pointer; font-family:var(--font-body); flex-shrink:0;}
+.chip.active{ background:var(--ink); color:#F7F5F0; border-color:var(--ink);}
+.search-bar{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:11px 14px; font-size:14px; color:var(--ink); margin-bottom:14px; width:100%; font-family:var(--font-body);}
+
+/* ---------- FICHA ---------- */
+.lead-header{ display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+.avatar{ width:44px; height:44px; border-radius:50%; background:var(--ink); color:#F7F5F0; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:600; font-size:16px; flex-shrink:0;}
+.lead-header .name{ font-family:var(--font-display); font-size:18px; font-weight:600;}
+.lead-header .sub{ font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+.status-track{ display:flex; gap:4px; margin:18px 0 20px; overflow-x:auto; }
+.status-pill{ font-size:10px; font-weight:600; padding:6px 9px; border-radius:8px; white-space:nowrap; font-family:var(--font-mono); letter-spacing:0.01em; background:var(--line); color:var(--ink-soft); cursor:pointer; border:none; flex-shrink:0;}
+.status-pill.done{ background:var(--ink); color:#F7F5F0;}
+.status-pill.current{ background:var(--sand); color:var(--ink);}
+
+.wa-btn{ display:flex; align-items:center; justify-content:center; gap:8px; background:#25D366; color:#fff; border:none; padding:12px; border-radius:10px; font-weight:600; font-size:14px; width:100%; margin-bottom:14px; cursor:pointer; font-family:var(--font-body); text-decoration:none;}
+.wa-btn:visited{ color:#fff; }
+
+.responsavel-row{ display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 13px; margin-bottom:14px; font-size:13px; }
+.responsavel-row select{ border:none; background:none; font-weight:600; font-family:var(--font-body); font-size:13px; color:var(--ink); }
+
+.decisor-alert{ display:flex; align-items:flex-start; gap:10px; background:#FBF1E4; border:1px solid #E8D3AC; border-radius:10px; padding:11px 13px; margin-bottom:14px; font-size:12.5px; color:#6B4E1E; line-height:1.4;}
+.decisor-alert input{ margin-top:2px; }
+
+.card-block{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
+.card-block h4{ font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--sand-deep); font-weight:600; margin-bottom:12px;}
+.field-row{ display:flex; gap:10px; }
+.field-row .field{ flex:1; }
+
+.chip-select{ display:flex; flex-wrap:wrap; gap:7px; }
+.chip-select .chip{ font-size:11.5px; padding:6px 11px; }
+.chip-select .chip.sel{ background:var(--ink); color:#F7F5F0; border-color:var(--ink);}
+
+.notes-log{ display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:260px; overflow-y:auto;}
+.note-item{ border-left:2px solid var(--sand); padding-left:10px; }
+.note-item.auto{ border-left-color:var(--line); }
+.note-item .note-meta{ font-family:var(--font-mono); font-size:10px; color:var(--ink-soft); margin-bottom:2px;}
+.note-item .note-text{ font-size:13px; color:var(--ink); line-height:1.4;}
+
+.new-note-row{ display:flex; gap:8px; }
+.new-note-row input{ flex:1; }
+.btn-add{ background:var(--ink); color:#F7F5F0; border:none; border-radius:10px; width:42px; font-size:18px; font-weight:600; cursor:pointer; flex-shrink:0;}
+.btn-add:disabled{ opacity:0.4; }
+
+.save-hint{ font-size:11px; color:var(--ink-soft); text-align:center; padding:6px 0 0; }
+.save-hint.pending{ color:var(--amber); font-weight:600; }
+.save-hint.error{ color:var(--red); font-weight:600; }
+
+/* ---------- NOVO LEAD MODAL ---------- */
+.modal-overlay{ position:fixed; inset:0; background:rgba(16,28,44,0.55); display:none; align-items:flex-end; justify-content:center; z-index:100;}
+.modal-overlay.show{ display:flex; }
+.modal-sheet{ background:var(--paper); width:100%; max-width:520px; border-radius:20px 20px 0 0; padding:22px 20px 28px; max-height:88vh; overflow-y:auto;}
+.modal-title{ font-family:var(--font-display); font-size:18px; font-weight:600; margin-bottom:4px;}
+.modal-sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:18px;}
+.modal-close{ position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; color:var(--ink-soft); cursor:pointer;}
+.duplicate-warning{ background:#FBF1E4; border:1px solid #E8D3AC; border-radius:10px; padding:10px 12px; font-size:12px; color:#6B4E1E; margin-bottom:12px; display:none;}
+.duplicate-warning.show{ display:block; }
+
+/* ---------- BOTTOM NAV ---------- */
+.bottom-nav{ position:sticky; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--line); display:flex; padding:10px 8px 16px; flex-shrink:0; z-index:20;}
+.nav-item{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; cursor:pointer; padding:4px;}
+.nav-icon{ width:22px; height:22px; }
+.nav-label{ font-size:10px; font-weight:600; color:var(--ink-soft); font-family:var(--font-body);}
+.nav-item.active .nav-label{ color:var(--ink); }
+.nav-item.active .nav-icon svg{ stroke:var(--ink); }
+.nav-item .nav-icon svg{ stroke:var(--ink-soft); }
+
+.fab{ position:fixed; right:calc(50% - 260px + 18px); bottom:96px; width:52px; height:52px; border-radius:50%; background:var(--sand); color:var(--ink); border:none; font-size:26px; font-weight:600; cursor:pointer; box-shadow:0 8px 20px rgba(201,166,107,0.5); display:flex; align-items:center; justify-content:center; z-index:30;}
+@media (max-width:560px){ .fab{ right:18px; } }
+
+.loading-spin{ text-align:center; padding:40px; color:var(--ink-soft); font-size:13px; }
+.toast{ position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F7F5F0; padding:10px 18px; border-radius:24px; font-size:13px; z-index:200; opacity:0; transition:opacity .2s; pointer-events:none;}
+.toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- LOGIN -->
+  <section class="screen active" id="view-login">
+    <div class="mark-lg"></div>
+    <div class="login-title">Crivo</div>
+    <div class="login-sub">Qualificação de leads</div>
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="loginUser" placeholder="herbert ou ester" autocapitalize="off" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="loginPass" placeholder="••••••••">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button class="btn-primary" id="loginBtn">Entrar</button>
+    <div class="login-users">Acesso restrito · Herbert &amp; Ester</div>
+  </section>
+
+  <!-- APP SHELL (só aparece após login) -->
+  <div id="appShell" style="display:none; flex-direction:column; flex:1;">
+
+    <div class="app-header" id="header">
+      <button class="back-btn" id="backBtn">‹ Voltar</button>
+      <div class="mark"></div>
+      <div class="header-status" id="headerStatus"></div>
+    </div>
+
+    <!-- PAINEL -->
+    <section class="screen" id="view-painel">
+      <div class="content">
+        <div class="section-eyebrow">Painel · hoje</div>
+        <div class="page-title" id="painelGreeting">Bom dia</div>
+        <div id="statsArea"><div class="loading-spin">Carregando...</div></div>
+        <div class="followup-header">
+          <h3>Follow-up de hoje</h3>
+          <span class="followup-count" id="followupCount"></span>
+        </div>
+        <div id="followupList"></div>
+      </div>
+    </section>
+
+    <!-- LEADS -->
+    <section class="screen" id="view-leads">
+      <div class="content">
+        <div class="section-eyebrow">Leads</div>
+        <div class="page-title">Carteira ativa</div>
+        <input class="search-bar" id="searchInput" placeholder="🔍 Buscar por nome ou telefone">
+        <div class="filter-chips" id="statusFilters"></div>
+        <div id="leadsListArea"></div>
+      </div>
+    </section>
+
+    <!-- FICHA -->
+    <section class="screen" id="view-ficha">
+      <div class="content" id="fichaContent">
+        <div class="loading-spin">Carregando...</div>
+      </div>
+    </section>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav" id="bottomNav">
+      <button class="nav-item" data-nav="leads">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+        <span class="nav-label">Leads</span>
+      </button>
+      <button class="nav-item active" data-nav="painel">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg></span>
+        <span class="nav-label">Painel</span>
+      </button>
+      <button class="nav-item" data-nav="ficha-vazia">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
+        <span class="nav-label">Ficha</span>
+      </button>
+    </div>
+
+    <button class="fab" id="fabNewLead">+</button>
+  </div>
+
+  <!-- MODAL NOVO LEAD -->
+  <div class="modal-overlay" id="modalNovoLead">
+    <div class="modal-sheet" style="position:relative;">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div class="modal-title">Novo lead</div>
+      <div class="modal-sub">Só o essencial agora — o resto você completa na ficha, conforme a conversa avança.</div>
+      <div class="duplicate-warning" id="duplicateWarning"></div>
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="newLeadNome" placeholder="Nome do cliente">
+      </div>
+      <div class="field">
+        <label>Telefone (com DDD)</label>
+        <input type="tel" id="newLeadTelefone" placeholder="21988776655">
+      </div>
+      <div class="field">
+        <label>Motor de aquisição</label>
+        <select id="newLeadMotor">
+          <option value="Campanha">Campanha</option>
+          <option value="Base">Base (repique/reativação)</option>
+          <option value="Prospecção">Prospecção</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="createLeadBtn">Criar lead</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbynVOdWdl0jt5vOTZTLY0Pk3jFz5ESgrC4C-bKwMclQTHeS-TVylnnIGG6-hm4l-ozq/exec';
+
+const STATUS_LIST = ['Novo','Qualificado','Reunião','Documentação','Pasta','Cliente Pronto','Perdido'];
+const STATUS_SHORT = {'Novo':'Novo','Qualificado':'Qualif.','Reunião':'Reunião','Documentação':'Docum.','Pasta':'Pasta','Cliente Pronto':'Pronto','Perdido':'Perdido'};
+const MOTIVO_LIST = ['Preço','Entrada','Fluxo','Renda','Cônjuge','Documentação','Prazo','Localização','Produto','Adiou','Outro lançamento'];
+const FAIXA_LIST = ['À vista','200k+','100k+','80k+','60k+','30k+','Sem definição'];
+
+// ============================================================
+// ESTADO
+// ============================================================
+let state = {
+  user: null,          // {usuario, nome}
+  leads: [],
+  currentLeadId: null,
+  currentNotes: [],
+  statusFilter: 'Todos',
+  searchTerm: ''
+};
+
+// ============================================================
+// HELPERS DE REDE
+// ============================================================
+function apiGet(action, params){
+  params = params || {};
+  const qs = new URLSearchParams(Object.assign({action}, params)).toString();
+  return fetch(API_URL + '?' + qs).then(r => r.json());
+}
+
+function apiPost(action, payload){
+  const body = JSON.stringify(Object.assign({action}, payload));
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body
+  }).then(r => r.json());
+}
+
+// Fila offline — guarda ações que falharam por falta de conexão
+function queueOffline(action, payload){
+  const queue = JSON.parse(localStorage.getItem('qualifica_queue') || '[]');
+  queue.push({action, payload, ts: Date.now()});
+  localStorage.setItem('qualifica_queue', JSON.stringify(queue));
+}
+
+function flushQueue(){
+  const queue = JSON.parse(localStorage.getItem('qualifica_queue') || '[]');
+  if(queue.length === 0) return;
+  const remaining = [];
+  let processed = 0;
+  queue.forEach(item => {
+    apiPost(item.action, item.payload).then(() => {
+      processed++;
+      if(processed === queue.length){
+        localStorage.setItem('qualifica_queue', JSON.stringify(remaining));
+        if(remaining.length === 0) showToast('Sincronizado ✓');
+        loadLeads();
+      }
+    }).catch(() => {
+      remaining.push(item);
+      processed++;
+      if(processed === queue.length){
+        localStorage.setItem('qualifica_queue', JSON.stringify(remaining));
+      }
+    });
+  });
+}
+
+function postWithFallback(action, payload, onSuccess, onQueued){
+  apiPost(action, payload).then(res => {
+    if(res.ok){ onSuccess && onSuccess(res); }
+    else { showToast('Erro: ' + (res.error || 'falha ao salvar')); }
+  }).catch(() => {
+    queueOffline(action, payload);
+    showToast('Sem conexão — salvo localmente, sincroniza depois');
+    onQueued && onQueued();
+  });
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+
+function doLogin(){
+  const usuario = document.getElementById('loginUser').value.trim();
+  const senha = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  if(!usuario || !senha){ errEl.textContent = 'Preencha usuário e senha.'; return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+
+  apiPost('login', {usuario, senha}).then(res => {
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if(res.ok){
+      state.user = {usuario: res.usuario, nome: res.nome};
+      localStorage.setItem('qualifica_user', JSON.stringify(state.user));
+      enterApp();
+    } else {
+      errEl.textContent = res.error || 'Usuário ou senha inválidos.';
+    }
+  }).catch(() => {
+    btn.disabled = false; btn.textContent = 'Entrar';
+    errEl.textContent = 'Sem conexão. Verifique sua internet e tente de novo.';
+  });
+}
+
+function tryRestoreSession(){
+  const saved = localStorage.getItem('qualifica_user');
+  if(saved){
+    state.user = JSON.parse(saved);
+    enterApp();
+  }
+}
+
+function enterApp(){
+  document.getElementById('view-login').classList.remove('active');
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('painelGreeting').textContent = 'Olá, ' + state.user.nome;
+  showView('painel');
+  loadLeads();
+  flushQueue();
+  window.addEventListener('online', flushQueue);
+}
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.nav;
+    if(target === 'ficha-vazia'){
+      if(state.leads.length > 0){ openFicha(state.leads[0].id); }
+      else { showToast('Nenhum lead cadastrado ainda'); }
+      return;
+    }
+    showView(target);
+  });
+});
+
+document.getElementById('backBtn').addEventListener('click', () => showView('leads'));
+
+function showView(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+
+  const backBtn = document.getElementById('backBtn');
+  backBtn.classList.toggle('show', name === 'ficha');
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(name === 'painel') document.querySelector('[data-nav="painel"]').classList.add('active');
+  if(name === 'leads') document.querySelector('[data-nav="leads"]').classList.add('active');
+  if(name === 'ficha') document.querySelector('[data-nav="ficha-vazia"]').classList.add('active');
+
+  if(name === 'painel') renderPainel();
+  if(name === 'leads') renderLeadsList();
+}
+
+// ============================================================
+// CARREGAR LEADS
+// ============================================================
+function loadLeads(){
+  apiGet('leads').then(res => {
+    if(res.ok){
+      state.leads = res.data;
+      document.getElementById('headerStatus').textContent = '';
+      renderPainel();
+      renderLeadsList();
+    }
+  }).catch(() => {
+    document.getElementById('headerStatus').textContent = 'offline';
+  });
+}
+
+function daysSince(dateStr){
+  if(!dateStr) return 999;
+  const d = new Date(dateStr);
+  if(isNaN(d)) return 999;
+  const diffMs = Date.now() - d.getTime();
+  return Math.floor(diffMs / (1000*60*60*24));
+}
+
+function beaconClass(days){
+  if(days <= 1) return 'green';
+  if(days <= 3) return 'amber';
+  return 'red';
+}
+
+// ============================================================
+// PAINEL
+// ============================================================
+function renderPainel(){
+  const leads = state.leads;
+  const pastas = leads.filter(l => l.status === 'Pasta').length;
+  const prontos = leads.filter(l => l.status === 'Cliente Pronto').length;
+  const ativos = leads.filter(l => l.status !== 'Perdido').length;
+  const perdidos = leads.filter(l => l.status === 'Perdido').length;
+
+  document.getElementById('statsArea').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${pastas}</div><div class="stat-label">Pastas</div></div>
+      <div class="stat-card"><div class="stat-num">${prontos}</div><div class="stat-label">Clientes prontos</div></div>
+      <div class="stat-card"><div class="stat-num">${ativos}</div><div class="stat-label">Leads ativos</div></div>
+      <div class="stat-card"><div class="stat-num">${perdidos}</div><div class="stat-label">Perdidos</div></div>
+    </div>
+  `;
+
+  const followups = leads
+    .filter(l => l.status !== 'Perdido' && l.status !== 'Cliente Pronto')
+    .map(l => Object.assign({}, l, {_days: daysSince(l.data_ultimo_contato)}))
+    .filter(l => l._days >= 2)
+    .sort((a,b) => b._days - a._days);
+
+  document.getElementById('followupCount').textContent = followups.length + ' pendentes';
+
+  const listEl = document.getElementById('followupList');
+  if(followups.length === 0){
+    listEl.innerHTML = '<div class="empty-state">Nenhum follow-up pendente agora 🎉</div>';
+    return;
+  }
+  listEl.innerHTML = followups.map(l => leadRowHtml(l)).join('');
+  listEl.querySelectorAll('.lead-row').forEach(row => {
+    row.addEventListener('click', () => openFicha(row.dataset.id));
+  });
+}
+
+function leadRowHtml(lead){
+  const days = daysSince(lead.data_ultimo_contato);
+  const cls = beaconClass(days);
+  const meta = [lead.status, lead.responsavel_atual].filter(Boolean).join(' · ');
+  return `
+    <div class="lead-row" data-id="${lead.id}">
+      <div class="beacon ${cls}"></div>
+      <div class="info">
+        <div class="name">${escapeHtml(lead.nome || 'Sem nome')}</div>
+        <div class="meta">${escapeHtml(meta)}</div>
+      </div>
+      <div class="days"><b>${days === 999 ? '—' : days}</b> ${days === 1 ? 'dia' : 'dias'}</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// LISTA DE LEADS
+// ============================================================
+function buildStatusFilters(){
+  const container = document.getElementById('statusFilters');
+  const all = ['Todos'].concat(STATUS_LIST);
+  container.innerHTML = all.map(s =>
+    `<div class="chip ${s === state.statusFilter ? 'active' : ''}" data-status="${s}">${s}</div>`
+  ).join('');
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.statusFilter = chip.dataset.status;
+      renderLeadsList();
+    });
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.searchTerm = e.target.value.toLowerCase();
+  renderLeadsList();
+});
+
+function renderLeadsList(){
+  buildStatusFilters();
+  let leads = state.leads.slice();
+
+  if(state.statusFilter !== 'Todos'){
+    leads = leads.filter(l => l.status === state.statusFilter);
+  }
+  if(state.searchTerm){
+    leads = leads.filter(l =>
+      (l.nome || '').toLowerCase().includes(state.searchTerm) ||
+      (l.telefone || '').includes(state.searchTerm)
+    );
+  }
+  leads.sort((a,b) => daysSince(b.data_ultimo_contato) - daysSince(a.data_ultimo_contato));
+
+  const area = document.getElementById('leadsListArea');
+  if(leads.length === 0){
+    area.innerHTML = '<div class="empty-state">Nenhum lead encontrado.<br>Toque no + pra cadastrar um novo.</div>';
+    return;
+  }
+  area.innerHTML = leads.map(l => leadRowHtml(l)).join('');
+  area.querySelectorAll('.lead-row').forEach(row => {
+    row.addEventListener('click', () => openFicha(row.dataset.id));
+  });
+}
+
+// ============================================================
+// FICHA DO LEAD
+// ============================================================
+function openFicha(leadId){
+  state.currentLeadId = leadId;
+  showView('ficha');
+  renderFicha();
+  loadNotes(leadId);
+}
+
+function getCurrentLead(){
+  return state.leads.find(l => String(l.id) === String(state.currentLeadId));
+}
+
+function initials(name){
+  if(!name) return '?';
+  const parts = name.trim().split(' ');
+  return ((parts[0]||'')[0] + (parts[1]?parts[1][0]:'')).toUpperCase();
+}
+
+function renderFicha(){
+  const lead = getCurrentLead();
+  if(!lead){
+    document.getElementById('fichaContent').innerHTML = '<div class="empty-state">Lead não encontrado.</div>';
+    return;
+  }
+
+  const waPhone = (lead.telefone || '').replace(/\D/g,'');
+
+  document.getElementById('fichaContent').innerHTML = `
+    <div class="lead-header">
+      <div class="avatar">${initials(lead.nome)}</div>
+      <div>
+        <div class="name">${escapeHtml(lead.nome || 'Sem nome')}</div>
+        <div class="sub">${escapeHtml(lead.telefone || '—')} · Motor: ${escapeHtml(lead.motor_aquisicao || '—')}</div>
+      </div>
+    </div>
+
+    ${waPhone ? `<a class="wa-btn" href="https://wa.me/${waPhone}" target="_blank">💬 Abrir conversa no WhatsApp</a>` : ''}
+
+    <div class="status-track" id="statusTrack"></div>
+
+    <div class="responsavel-row">
+      <span>Responsável atual</span>
+      <select id="responsavelSelect">
+        <option value="Herbert" ${lead.responsavel_atual === 'Herbert' ? 'selected' : ''}>Herbert</option>
+        <option value="Ester" ${lead.responsavel_atual === 'Ester' ? 'selected' : ''}>Ester</option>
+      </select>
+    </div>
+
+    <div class="decisor-alert">
+      <input type="checkbox" id="decisorCheck" ${lead.decisor_confirmado === 'Sim' ? 'checked' : ''}>
+      <div>Decisor confirmado na reunião${lead.decisor_nome ? ' — ' + escapeHtml(lead.decisor_nome) : ''}. Sem isso marcado, evite avançar pra "Documentação".</div>
+    </div>
+
+    <div class="card-block">
+      <h4>Qualificação</h4>
+      <div class="field-row">
+        <div class="field"><label>Finalidade</label>
+          <select id="f_finalidade">
+            <option value="">—</option>
+            <option value="Investir" ${lead.finalidade==='Investir'?'selected':''}>Investir</option>
+            <option value="Morar" ${lead.finalidade==='Morar'?'selected':''}>Morar</option>
+          </select>
+        </div>
+        <div class="field"><label>Timing</label>
+          <select id="f_timing">
+            <option value="">—</option>
+            <option value="Lançamento" ${lead.timing==='Lançamento'?'selected':''}>Lançamento</option>
+            <option value="Futuro" ${lead.timing==='Futuro'?'selected':''}>Futuro</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Faixa de entrada</label>
+          <select id="f_faixa_entrada">
+            <option value="">—</option>
+            ${FAIXA_LIST.map(f => `<option value="${f}" ${lead.faixa_entrada===f?'selected':''}>${f}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Pagamento</label>
+          <select id="f_forma_pagamento">
+            <option value="">—</option>
+            <option value="À vista" ${lead.forma_pagamento==='À vista'?'selected':''}>À vista</option>
+            <option value="Financiado" ${lead.forma_pagamento==='Financiado'?'selected':''}>Financiado</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Renda</label>
+          <select id="f_renda_tipo">
+            <option value="">—</option>
+            <option value="PF Formal" ${lead.renda_tipo==='PF Formal'?'selected':''}>PF Formal</option>
+            <option value="Autônomo" ${lead.renda_tipo==='Autônomo'?'selected':''}>Autônomo</option>
+            <option value="Financiamento Direto" ${lead.renda_tipo==='Financiamento Direto'?'selected':''}>Financiamento Direto</option>
+          </select>
+        </div>
+        <div class="field"><label>Documentação</label>
+          <select id="f_documentacao_status">
+            <option value="">—</option>
+            <option value="Não iniciou" ${lead.documentacao_status==='Não iniciou'?'selected':''}>Não iniciou</option>
+            <option value="Em andamento" ${lead.documentacao_status==='Em andamento'?'selected':''}>Em andamento</option>
+            <option value="Completa" ${lead.documentacao_status==='Completa'?'selected':''}>Completa</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Produto desejado</label>
+        <input type="text" id="f_produto_desejado" value="${escapeAttr(lead.produto_desejado)}" placeholder="studio, 2 quartos...">
+      </div>
+      <div class="field"><label>Nome do decisor (se houver)</label>
+        <input type="text" id="f_decisor_nome" value="${escapeAttr(lead.decisor_nome)}" placeholder="esposa, sócio...">
+      </div>
+      <button class="btn-secondary" id="saveFieldsBtn">Salvar qualificação</button>
+    </div>
+
+    <div class="card-block">
+      <h4>Objeção principal</h4>
+      <div class="chip-select" id="objecaoChips"></div>
+    </div>
+
+    <div class="card-block" id="perdaBlock" style="display:${lead.status === 'Perdido' ? 'block' : 'none'}">
+      <h4>Motivo da perda</h4>
+      <div class="chip-select" id="motivoChips"></div>
+    </div>
+
+    <div class="card-block">
+      <h4>Notas · registrado como ${escapeHtml(state.user.nome)}</h4>
+      <div class="notes-log" id="notesLog"><div class="empty-state" style="padding:12px;">Carregando...</div></div>
+      <div class="new-note-row">
+        <input type="text" id="newNoteInput" placeholder="Adicionar nota...">
+        <button class="btn-add" id="addNoteBtn">+</button>
+      </div>
+    </div>
+
+    <div class="save-hint" id="saveHint">Alterações são salvas na planilha automaticamente</div>
+  `;
+
+  renderStatusTrack(lead);
+  renderChipSelect('objecaoChips', MOTIVO_LIST, lead.objecao_principal, val => {
+    postWithFallback('updateLead', {id: lead.id, fields: {objecao_principal: val}}, () => {
+      lead.objecao_principal = val;
+      showToast('Objeção salva');
+    });
+  });
+  renderChipSelect('motivoChips', MOTIVO_LIST, lead.motivo_perda, val => {
+    postWithFallback('updateLead', {id: lead.id, fields: {motivo_perda: val}}, () => {
+      lead.motivo_perda = val;
+      showToast('Motivo salvo');
+    });
+  });
+
+  document.getElementById('decisorCheck').addEventListener('change', e => {
+    const val = e.target.checked ? 'Sim' : 'Não';
+    postWithFallback('updateLead', {id: lead.id, fields: {decisor_confirmado: val}}, () => {
+      lead.decisor_confirmado = val;
+    });
+  });
+
+  document.getElementById('responsavelSelect').addEventListener('change', e => {
+    const novo = e.target.value;
+    postWithFallback('changeResponsavel', {id: lead.id, novoResponsavel: novo, autor: state.user.nome}, () => {
+      lead.responsavel_atual = novo;
+      lead.data_ultimo_contato = new Date().toISOString();
+      showToast('Responsável: ' + novo);
+      // atualiza notas localmente, sem nova chamada ao servidor
+      state.currentNotes.push({
+        autor: state.user.nome,
+        texto: 'Responsável alterado para: ' + novo,
+        data_hora: new Date().toISOString(),
+        tipo_evento: 'Troca de responsável'
+      });
+      renderNotes();
+    });
+  });
+
+  document.getElementById('saveFieldsBtn').addEventListener('click', () => {
+    const fields = {
+      finalidade: val('f_finalidade'),
+      timing: val('f_timing'),
+      faixa_entrada: val('f_faixa_entrada'),
+      forma_pagamento: val('f_forma_pagamento'),
+      renda_tipo: val('f_renda_tipo'),
+      documentacao_status: val('f_documentacao_status'),
+      produto_desejado: val('f_produto_desejado'),
+      decisor_nome: val('f_decisor_nome')
+    };
+    const btn = document.getElementById('saveFieldsBtn');
+    btn.textContent = 'Salvando...'; btn.disabled = true;
+    postWithFallback('updateLead', {id: lead.id, fields}, () => {
+      Object.assign(lead, fields);
+      btn.textContent = 'Salvo ✓';
+      setTimeout(() => { btn.textContent = 'Salvar qualificação'; btn.disabled = false; }, 1200);
+    }, () => {
+      btn.textContent = 'Salvar qualificação'; btn.disabled = false;
+    });
+  });
+
+  document.getElementById('addNoteBtn').addEventListener('click', addNoteHandler);
+  document.getElementById('newNoteInput').addEventListener('keydown', e => { if(e.key === 'Enter') addNoteHandler(); });
+}
+
+function val(id){ return document.getElementById(id).value; }
+
+function renderChipSelect(containerId, options, current, onSelect){
+  const container = document.getElementById(containerId);
+  container.innerHTML = options.map(o =>
+    `<div class="chip ${o === current ? 'sel' : ''}" data-val="${escapeAttr(o)}">${o}</div>`
+  ).join('');
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
+      chip.classList.add('sel');
+      onSelect(chip.dataset.val);
+    });
+  });
+}
+
+function renderStatusTrack(lead){
+  const track = document.getElementById('statusTrack');
+  const currentIdx = STATUS_LIST.indexOf(lead.status);
+  track.innerHTML = STATUS_LIST.map((s, i) => {
+    let cls = '';
+    if(s === lead.status) cls = 'current';
+    else if(i < currentIdx) cls = 'done';
+    return `<button class="status-pill ${cls}" data-status="${s}">${STATUS_SHORT[s]}</button>`;
+  }).join('');
+  track.querySelectorAll('.status-pill').forEach(btn => {
+    btn.addEventListener('click', () => changeLeadStatus(lead, btn.dataset.status));
+  });
+}
+
+function changeLeadStatus(lead, novoStatus){
+  if(novoStatus === lead.status) return;
+
+  if(novoStatus === 'Documentação' && lead.decisor_confirmado !== 'Sim'){
+    if(!confirm('O decisor ainda não foi confirmado na reunião. Avançar mesmo assim?')) return;
+  }
+
+  let motivoPerda = null;
+  if(novoStatus === 'Perdido'){
+    motivoPerda = lead.motivo_perda || prompt('Motivo da perda? (' + MOTIVO_LIST.join(', ') + ')') || '';
+  }
+
+  postWithFallback('changeStatus', {id: lead.id, status: novoStatus, autor: state.user.nome, motivoPerda}, () => {
+    lead.status = novoStatus;
+    if(motivoPerda) lead.motivo_perda = motivoPerda;
+    lead.data_ultimo_contato = new Date().toISOString();
+    showToast('Status: ' + novoStatus);
+    renderStatusTrack(lead);
+    document.getElementById('perdaBlock').style.display = novoStatus === 'Perdido' ? 'block' : 'none';
+    // atualiza notas localmente, sem nova chamada ao servidor
+    state.currentNotes.push({
+      autor: state.user.nome,
+      texto: 'Status alterado para: ' + novoStatus + (motivoPerda ? ' (' + motivoPerda + ')' : ''),
+      data_hora: new Date().toISOString(),
+      tipo_evento: 'Mudança de status'
+    });
+    renderNotes();
+  });
+}
+
+// ---------- NOTAS ----------
+function loadNotes(leadId){
+  apiGet('notes', {leadId}).then(res => {
+    if(res.ok){
+      state.currentNotes = res.data;
+      renderNotes();
+    }
+  }).catch(() => {
+    const el = document.getElementById('notesLog');
+    if(el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Sem conexão pra carregar notas.</div>';
+  });
+}
+
+function renderNotes(){
+  const el = document.getElementById('notesLog');
+  if(!el) return;
+  if(state.currentNotes.length === 0){
+    el.innerHTML = '<div class="empty-state" style="padding:12px;">Nenhuma nota ainda.</div>';
+    return;
+  }
+  el.innerHTML = state.currentNotes.map(n => {
+    const isAuto = n.tipo_evento && n.tipo_evento !== 'Nota manual';
+    const dateStr = formatDateTime(n.data_hora);
+    return `
+      <div class="note-item ${isAuto ? 'auto' : ''}">
+        <div class="note-meta">${dateStr} · ${escapeHtml(n.autor || '')}${isAuto ? ' · ' + escapeHtml(n.tipo_evento) : ''}</div>
+        <div class="note-text">${escapeHtml(n.texto || '')}</div>
+      </div>
+    `;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function addNoteHandler(){
+  const input = document.getElementById('newNoteInput');
+  const texto = input.value.trim();
+  if(!texto) return;
+  const lead = getCurrentLead();
+  const btn = document.getElementById('addNoteBtn');
+  btn.disabled = true;
+  input.value = '';
+
+  postWithFallback('addNote', {leadId: lead.id, autor: state.user.nome, texto, tipoEvento: 'Nota manual'}, () => {
+    btn.disabled = false;
+    lead.data_ultimo_contato = new Date().toISOString();
+    // adiciona localmente em vez de recarregar do servidor
+    state.currentNotes.push({autor: state.user.nome, texto, data_hora: new Date().toISOString(), tipo_evento: 'Nota manual'});
+    renderNotes();
+  }, () => {
+    btn.disabled = false;
+    // otimista: mostra a nota localmente mesmo offline
+    state.currentNotes.push({autor: state.user.nome, texto, data_hora: new Date().toISOString(), tipo_evento: 'Nota manual (pendente de sincronizar)'});
+    renderNotes();
+  });
+}
+
+// ============================================================
+// NOVO LEAD (MODAL)
+// ============================================================
+const modal = document.getElementById('modalNovoLead');
+document.getElementById('fabNewLead').addEventListener('click', () => {
+  document.getElementById('newLeadNome').value = '';
+  document.getElementById('newLeadTelefone').value = '';
+  document.getElementById('duplicateWarning').classList.remove('show');
+  modal.classList.add('show');
+});
+document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
+modal.addEventListener('click', e => { if(e.target === modal) modal.classList.remove('show'); });
+
+document.getElementById('newLeadTelefone').addEventListener('input', e => {
+  const phone = e.target.value.replace(/\D/g,'');
+  const dup = state.leads.find(l => (l.telefone||'').replace(/\D/g,'') === phone && phone.length >= 8);
+  const warnEl = document.getElementById('duplicateWarning');
+  if(dup){
+    warnEl.textContent = 'Já existe um lead com esse telefone: ' + dup.nome + ' (' + dup.status + ')';
+    warnEl.classList.add('show');
+  } else {
+    warnEl.classList.remove('show');
+  }
+});
+
+document.getElementById('createLeadBtn').addEventListener('click', () => {
+  const nome = document.getElementById('newLeadNome').value.trim();
+  const telefone = document.getElementById('newLeadTelefone').value.trim();
+  const motor = document.getElementById('newLeadMotor').value;
+
+  if(!nome || !telefone){ showToast('Preencha nome e telefone'); return; }
+
+  const btn = document.getElementById('createLeadBtn');
+  btn.disabled = true; btn.textContent = 'Criando...';
+
+  const lead = {
+    nome, telefone, motor_aquisicao: motor,
+    status: 'Novo', responsavel_atual: state.user.nome,
+    decisor_confirmado: 'Não'
+  };
+
+  postWithFallback('createLead', {lead}, res => {
+    btn.disabled = false; btn.textContent = 'Criar lead';
+    modal.classList.remove('show');
+    showToast('Lead criado');
+    loadLeads();
+    if(res.id) setTimeout(() => openFicha(res.id), 400);
+  }, () => {
+    btn.disabled = false; btn.textContent = 'Criar lead';
+    modal.classList.remove('show');
+  });
+});
+
+// ============================================================
+// UTIL
+// ============================================================
+function escapeHtml(str){
+  if(str === undefined || str === null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+function formatDateTime(str){
+  if(!str) return '';
+  const d = new Date(str);
+  if(isNaN(d)) return str;
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ============================================================
+// INIT
+// ============================================================
+tryRestoreSession();
+</script>
+</body>
+</html>
